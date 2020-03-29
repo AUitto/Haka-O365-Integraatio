@@ -20,25 +20,25 @@ optional arguments:
 
 #### SQL-palvelin
 
-
->MariaDB [haka_integ]> describe users;
->+----------------------+------------------+------+-----+---------+-------+
->| Field                | Type             | Null | Key | Default | Extra |
->+----------------------+------------------+------+-----+---------+-------+
->| haka_uid             | int(10) unsigned | NO   | PRI | NULL    |       |
->| aad_uuid             | varchar(36)      | YES  |     | NULL    |       |
->| username             | varchar(40)      | YES  |     | NULL    |       |
->| lastname             | varchar(20)      | NO   |     | NULL    |       |
->| firstname            | varchar(20)      | NO   |     | NULL    |       |
->| hireDate             | datetime         | YES  |     | NULL    |       |
->| mail                 | varchar(320)     | NO   |     | NULL    |       |
->| phone                | varchar(22)      | NO   |     | NULL    |       |
->| onedrive_id          | varchar(40)      | YES  |     | NULL    |       |
->| onedrive_shared_flag | tinyint(1)       | YES  |     | NULL    |       |
->| exists_haka_flag     | tinyint(1)       | YES  |     | NULL    |       |
->| updated_flag         | tinyint(1)       | YES  |     | NULL    |       |
->| new_user_flag        | tinyint(1)       | YES  |     | NULL    |       |
->+----------------------+------------------+------+-----+---------+-------+
+```
+MariaDB [haka_integ]> describe users;
++----------------------+------------------+------+-----+---------+-------+
+| Field                | Type             | Null | Key | Default | Extra |
++----------------------+------------------+------+-----+---------+-------+
+| haka_uid             | int(10) unsigned | NO   | PRI | NULL    |       |
+| aad_uuid             | varchar(36)      | YES  |     | NULL    |       |
+| username             | varchar(40)      | YES  |     | NULL    |       |
+| lastname             | varchar(20)      | NO   |     | NULL    |       |
+| firstname            | varchar(20)      | NO   |     | NULL    |       |
+| hireDate             | datetime         | YES  |     | NULL    |       |
+| mail                 | varchar(320)     | NO   |     | NULL    |       |
+| phone                | varchar(22)      | NO   |     | NULL    |       |
+| onedrive_id          | varchar(40)      | YES  |     | NULL    |       |
+| onedrive_shared_flag | tinyint(1)       | YES  |     | NULL    |       |
+| exists_haka_flag     | tinyint(1)       | YES  |     | NULL    |       |
+| updated_flag         | tinyint(1)       | YES  |     | NULL    |       |
+| new_user_flag        | tinyint(1)       | YES  |     | NULL    |       |
++----------------------+------------------+------+-----+---------+-------+
 
 MariaDB [haka_integ]> describe groups;
 +------------------+------------------+------+-----+---------+-------+
@@ -58,7 +58,7 @@ MariaDB [haka_integ]> describe groupmap;
 | aad_gid    | varchar(36) | YES  |     | NULL    |       |
 | mode       | varchar(10) | YES  |     | NULL    |       |
 +------------+-------------+------+-----+---------+-------+
-{code}
+```
 
 #### Users-taulu
 Toimii päätauluna kannassa. HAKA:sta tuodaan käyttäjän HAKA:ssa oleva ID-tietue, etu- ja sukunimi, sähköpostiosoite, puhelinnumero ja jäsenyyden alkamisaika. Etu- ja sukunimestä muodostetaan kantaan käyttäjätunnus muodossa etu.sukunimi. Kun Azure Active Directoryyn on luotu käyttäjä, sen UUID-tietue tallennetaan kantaan, jotta osataan myöhemmässä vaiheessa päivittää ja poistaa oikea käyttäjä. Samoin taulussa on muutama erillinen lippu, joilla ohjaillaan sovelluksen toimintaa eri vaiheissa.
