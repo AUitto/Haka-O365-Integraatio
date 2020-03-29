@@ -67,25 +67,26 @@ Toimii päätauluna kannassa. HAKA:sta tuodaan käyttäjän HAKA:ssa oleva ID-ti
 Pitää sisällään tiedot HAKA:sta tuodun jäsenen osastosta, sekä tälle merkityistä rooleista. Taulussa on myös lippuja, joilla ohjaillaan sovelluksen toimintaa eri vaiheissa.
 
 #### Groupmap-taulu
-Tällä ohjataan AAD:ssa olevien ryhmien ja HAKA:n kautta tuotujen roolien yhdistämistä. Samassa taulussa on myös Mode-sarake, joka on joko Member tai Owner, riippuen siitä, että halutaanko tietylle HAKA:n roolille antaa AAD:ssa omistajuus vai pelkkä jäsenyys. Tämä taulu täytyy muodostaa kokonaisuudessaan itse sen perusteella, miten ryhmien haluaa muodostuvan.
+Tällä ohjataan AAD:ssa olevien ryhmien ja HAKA:n kautta tuotujen roolien yhdistämistä. Samassa taulussa on myös Mode-sarake, joka on joko Member tai Owner, riippuen siitä, että halutaanko tietylle HAKA:n roolille antaa AAD:ssa omistajuus vai pelkkä jäsenyys. Tämä taulu täytyy muodostaa kokonaisuudessaan itse sen perusteella, miten ryhmien haluaa muodostuvan. Taulussa oleva aad_gid arvo on haettava Azure AD:sta.
 
 Esimerkki Groupmap-taulun sisällöstä:
+```
 +----------------------------------+--------------------------------------+--------+
 | haka_group                       | aad_gid                              | mode   |
 +----------------------------------+--------------------------------------+--------+
-| 1. varapäällikkö                 | bee143d8-xxxx-47df-abb3-720a51c27c7a | owner  |
-| 2. varapäällikkö                 | bee143d8-xxxx-47df-abb3-720a51c27c7a | owner  |
-| Koulutuspäällikkö                | bee143d8-xxxx-47df-abb3-720a51c27c7a | owner  |
-| Hälytysosasto                    | bee143d8-xxxx-47df-abb3-720a51c27c7a | member |
-| 1. varapäällikkö                 | 6e19028b-zzzz-4c5b-b55a-44091d38a5a5 | owner  |
-| 2. varapäällikkö                 | 6e19028b-zzzz-4c5b-b55a-44091d38a5a5 | member |
-| Koulutuspäällikkö                | 6e19028b-zzzz-4c5b-b55a-44091d38a5a5 | member |
-| Hälytysosasto                    | 6e19028b-zzzz-4c5b-b55a-44091d38a5a5 | member |
-| Puheenjohtaja                    | 4a121162-yyyy-4b28-97eb-9bea09138f1f | owner  |
-| Hallituksen jäsen                | 4a121162-yyyy-4b28-97eb-9bea09138f1f | member |
-| Sihteeri                         | 4a121162-yyyy-4b28-97eb-9bea09138f1f | member |
-| Puheenjohtaja                    | f4511972-aaaa-46b7-bb33-4eabfbae17f6 | owner  |
-| Hallituksen jäsen                | f4511972-aaaa-46b7-bb33-4eabfbae17f6 | member |
-| Sihteeri                         | f4511972-aaaa-46b7-bb33-4eabfbae17f6 | member |
+| 1. varapäällikkö                 | bee143d8-xxxx-47df-abb3-bbbbbbbbbbbb | owner  |
+| 2. varapäällikkö                 | bee143d8-xxxx-47df-abb3-bbbbbbbbbbbb | owner  |
+| Koulutuspäällikkö                | bee143d8-xxxx-47df-abb3-bbbbbbbbbbbb | owner  |
+| Hälytysosasto                    | bee143d8-xxxx-47df-abb3-bbbbbbbbbbbb | member |
+| 1. varapäällikkö                 | 6e19028b-zzzz-4c5b-b55a-bbbbbbbbbbbb | owner  |
+| 2. varapäällikkö                 | 6e19028b-zzzz-4c5b-b55a-bbbbbbbbbbbb | member |
+| Koulutuspäällikkö                | 6e19028b-zzzz-4c5b-b55a-bbbbbbbbbbbb | member |
+| Hälytysosasto                    | 6e19028b-zzzz-4c5b-b55a-bbbbbbbbbbbb | member |
+| Puheenjohtaja                    | 4a121162-yyyy-4b28-97eb-bbbbbbbbbbbb | owner  |
+| Hallituksen jäsen                | 4a121162-yyyy-4b28-97eb-bbbbbbbbbbbb | member |
+| Sihteeri                         | 4a121162-yyyy-4b28-97eb-bbbbbbbbbbbb | member |
+| Puheenjohtaja                    | f4511972-aaaa-46b7-bb33-bbbbbbbbbbbb | owner  |
+| Hallituksen jäsen                | f4511972-aaaa-46b7-bb33-bbbbbbbbbbbb | member |
+| Sihteeri                         | f4511972-aaaa-46b7-bb33-bbbbbbbbbbbb | member |
 +----------------------------------+--------------------------------------+--------+
-
+```
