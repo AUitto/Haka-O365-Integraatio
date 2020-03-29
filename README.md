@@ -20,6 +20,7 @@ optional arguments:
 
 ### SQL-palvelin
 
+{code}
 MariaDB [haka_integ]> describe users;
 +----------------------+------------------+------+-----+---------+-------+
 | Field                | Type             | Null | Key | Default | Extra |
@@ -57,6 +58,7 @@ MariaDB [haka_integ]> describe groupmap;
 | aad_gid    | varchar(36) | YES  |     | NULL    |       |
 | mode       | varchar(10) | YES  |     | NULL    |       |
 +------------+-------------+------+-----+---------+-------+
+{code}
 
 #### Users-taulu
 Toimii päätauluna kannassa. HAKA:sta tuodaan käyttäjän HAKA:ssa oleva ID-tietue, etu- ja sukunimi, sähköpostiosoite, puhelinnumero ja jäsenyyden alkamisaika. Etu- ja sukunimestä muodostetaan kantaan käyttäjätunnus muodossa etu.sukunimi. Kun Azure Active Directoryyn on luotu käyttäjä, sen UUID-tietue tallennetaan kantaan, jotta osataan myöhemmässä vaiheessa päivittää ja poistaa oikea käyttäjä. Samoin taulussa on muutama erillinen lippu, joilla ohjaillaan sovelluksen toimintaa eri vaiheissa.
