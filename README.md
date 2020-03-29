@@ -1,6 +1,6 @@
 # Haka-O365-Integraatio
 Integraatiotoiminto HAKA - Turvallisuusosaamisen hallinointikannan ja Microsoft Office 365:n välillä.
-
+```
 usage: CreateUsers.py [-h] -c CONFIG [-v] [-d]
 
 This Python script is used to export users from HAKA - Turvallisuusosaamisen
@@ -13,13 +13,13 @@ optional arguments:
   -v, --verbose         Run verbosely. Print only on errors and when users
                         modified.
   -d, --debug           Run in debug mode. Print me everything, EVERYTHING!
-
+```
 ## Tarvittavat komponentit
 - Palvelin:
 -- SQL-palvelin ja Python3
 
 #### SQL-palvelin
-
+Tietokannalle kannattanee luoda käyttäjä, jolla on SELECT, UPDATE, INSERT, DELETE -grantit ko. kantaan.
 ```
 MariaDB [haka_integ]> describe users;
 +----------------------+------------------+------+-----+---------+-------+
@@ -90,7 +90,7 @@ Esimerkki Groupmap-taulun sisällöstä:
 | Sihteeri                         | f4511972-aaaa-46b7-bb33-bbbbbbbbbbbb | member |
 +----------------------------------+--------------------------------------+--------+
 ```
-## Esimerkkejä:
+## Esimerkki:
 ```
 python3 CreateUsers.py -v -c parameters.json
 ```
