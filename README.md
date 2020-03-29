@@ -90,3 +90,12 @@ Esimerkki Groupmap-taulun sisällöstä:
 | Sihteeri                         | f4511972-aaaa-46b7-bb33-bbbbbbbbbbbb | member |
 +----------------------------------+--------------------------------------+--------+
 ```
+## Esimerkkejä:
+```
+python3 CreateUsers.py -v -c parameters.json
+```
+Suorittaa skriptin siten, että tulostetaan käyttäjiin kohdistuvat muutokset ja virheilmoitukset. Käytetään samassa hakemistossa olevaa parameters.json-tiedostoa. Tämä voitaisiin ajaa myös Crontabilla siten, että tuloste tulee sähköpostilla, jolloin pysytään tietoisina muokatuista ja uusista jäsenistä.
+
+## Linkkejä
+Microsoft Graph API Reference: https://docs.microsoft.com/en-us/graph/api/overview?toc=./ref/toc.json&view=graph-rest-1.0
+MS Identity Python Daemon: https://github.com/Azure-Samples/ms-identity-python-daemon
