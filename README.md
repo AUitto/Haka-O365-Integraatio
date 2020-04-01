@@ -100,7 +100,7 @@ Suorittaa skriptin siten, että tulostetaan käyttäjiin kohdistuvat muutokset j
 Microsoft Graph API Reference: https://docs.microsoft.com/en-us/graph/api/overview?toc=./ref/toc.json&view=graph-rest-1.0
 MS Identity Python Daemon: https://github.com/Azure-Samples/ms-identity-python-daemon
 
-## Seuraavat toiminnallisuudet
+## To Do:
 Järkevä viestinvälitys, eli sisäänrakennettu sähköpostitoiminnallisuus joka lähettäisi sähköpostilla tiedon järjestelmänvalvojille, kun käyttäjiä luodaan, käyttäjien tiedot tai ryhmät päivittyvät, tai kun käyttäjiä poistetaan. Myös jonkinlainen virhetilanteiden raportointi. 
 
 aad_user_management ja db_manager funktioiden siivoaminen. Väitän, että tuolta saisi varmaan jonkun 500 riviä siivottua, kun vaan ymmärtäisi mitä tekee.
