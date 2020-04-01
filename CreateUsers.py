@@ -1,9 +1,9 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
 #
-# CreateUsers.py v. 2.0
+# CreateUsers.py v. 2.0.001
 #
-# Date 29.3.2020
+# Date 1.4.2020
 
 # Import modules
 import sys
@@ -949,7 +949,7 @@ def aad_connector(config, aad_function):
         if delete_directories is not None:
             for row in delete_directories:
                 firstname=row[0]
-                firstname=row[1]
+                lastname=row[1]
                 onedrive_id=row[2]
 
                 onedrive_delete_directory=(s.delete(config["aad_endpoint"]+'drives/'+config["aad_onedrive-drive_id"]+'/items/'+onedrive_id, headers={'Content-Type': 'application/json', 'Authorization': 'Bearer ' + aad_access_token}))
