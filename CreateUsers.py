@@ -1,9 +1,9 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
 #
-# CreateUsers.py v. 2.0.001
+# CreateUsers.py v. 2.0.002
 #
-# Date 1.4.2020
+# Date 4.4.2020
 
 # Import modules
 import sys
@@ -25,7 +25,6 @@ global error_msg
 global error_level
 global startTime
 global arguments
-
 
 parser = argparse.ArgumentParser(description='This Python script is used to export users from HAKA - Turvallisuusosaamisen hallinnointikanta and import them to Azure Active Directory.')
 parser.add_argument('-c', '--config', help='Parameters.json file containing credentials.', required=True)
@@ -184,14 +183,30 @@ def db_manager(db_function, config, param1="None", param2="None", param3="None",
                     if(arguments.debug or arguments.verbose): print(error_msg[-1])
 
         else:
-            if(arguments.debug or arguments.verbose): print("\n\r"+"User "+firstname+" "+lastname+" ("+uid+") does not exist in the database."+"\n\r"+"Creating...")
-            try:
-                cursor.execute(('INSERT INTO users (haka_uid, username, lastname, firstname, hireDate, mail, phone, exists_haka_flag) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)'), (uid, username, lastname, firstname, hireDate, mail, phone, '1'))
-                conn.commit()
+            if (mail or phone):
+                if(arguments.debug or arguments.verbose): print("\n\r"+"User "+firstname+" "+lastname+" ("+uid+") does not exist in the database."+"\n\r"+"Creating...")
+                try:
+                    cursor.execute(('INSERT INTO users (haka_uid, username, lastname, firstname, hireDate, mail, phone, exists_haka_flag) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)'), (uid, username, lastname, firstname, hireDate, mail, phone, '1'))
+                    conn.commit()
 
-            except mysql.connector.Error as err:
-                    error_msg.append("Error in creating user "+firstname+" "+lastname+" ("+uid+"). Current db_function is: "+db_function+". SQL-error: "+str(err)+".")
-                    if(arguments.debug or arguments.verbose): print(error_msg[-1])
+                except mysql.connector.Error as err:
+                        error_msg.append("Error in creating user "+firstname+" "+lastname+" ("+uid+"). Current db_function is: "+db_function+". SQL-error: "+str(err)+".")
+                        if(arguments.debug or arguments.verbose): print(error_msg[-1])
+            else:
+                if(arguments.debug): print("\n\r"+"User "+firstname+" "+lastname+" ("+uid+") did not have either mail or phone set."+"\n\r")
+
+### haka_verify_user
+    if (db_function == 'haka_verify_user'):
+        uid=param1
+        try:
+            cursor.execute(('SELECT * FROM users WHERE haka_uid=%s'), (uid,))
+            conn.commit()
+        except mysql.connector.Error as err:
+            error_msg.append("Error selecting users from database. Current db_function is: "+db_function+". SQL-error: "+str(err)+".")
+            if(arguments.debug or arguments.verbose): print(error_msg[-1])
+        row=cursor.fetchall()
+        if (row is not None):
+           return row
 
 
 ### aad_new_users
@@ -345,7 +360,6 @@ def db_manager(db_function, config, param1="None", param2="None", param3="None",
 
 ### onedrive_query_drive
     if (db_function == 'onedrive_query_drive'):
-
         try:
             cursor.execute(('SELECT username,onedrive_id FROM users WHERE onedrive_shared_flag IS NULL AND onedrive_id IS NOT NULL'))
             conn.commit()
@@ -521,6 +535,7 @@ def haka_connector(config, haka_function):
             "ctl00$cphContent$lbJasenlajit$lbListBox":"10",
             "ctl00$cphContent$PalokuntaId$hdnValinta": "80377"
         }
+
         users = BeautifulSoup(s.post(config["haka_endpoint"]+'/Raportit/Raportti.aspx?raportti=jasenluettelo.ascx', params).text, features="lxml")
         table = users.find('table')
         rows = table.findChildren('tr')
@@ -566,6 +581,7 @@ def haka_connector(config, haka_function):
             mail = str(mail.text).strip()
             mail = "" if not re.search('^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$', mail) else mail
 
+#            if(uid == "90336" or uid == "12730"):
             db_function = "haka_user_management"
             db_manager(db_function,config,uid,username,firstname,lastname,hireDate,mail,phone)
 
@@ -601,7 +617,9 @@ def haka_connector(config, haka_function):
                 "__EVENTVALIDATION": roles.find('input', {'name':'__EVENTVALIDATION'})['value'],
                 "ctl00$Pikahaku$txtHaku":"",
                 "ctl00$cphContent$PalokuntaId$hdnValinta": config["haka_palokunta_id"],
-                "ctl00$cphContent$OsastotListBox$lbListBox": osasto
+                "ctl00$cphContent$OsastotListBox$lbListBox": osasto,
+                "ctl00$cphContent$lstSarakkeet$1": "Rooli",
+                "ctl00$cphContent$lstSarakkeet$13": "Jäsennumero"
             }
 
             roles = BeautifulSoup(s.post(config["haka_endpoint"]+'/Raportit/Raportti.aspx?raportti=jasenet.ascx', params).text, features="lxml")
@@ -609,35 +627,39 @@ def haka_connector(config, haka_function):
             table = roles.find('table')
             rows = roles.findChildren('tr')
             data = list()
+            name = []
             roles = []
             uid = []
 
 
-
             for row in rows[1:]:
-                roles.append(row.findAll('td')[3])
-                uid.append(row.findAll('td')[15])
+                name.append(row.findAll('td')[1])
+                roles.append(row.findAll('td')[2])
+                uid.append(row.findAll('td')[3])
 
             for uid, roles in zip(uid, roles):
+                db_function = "haka_verify_user"
                 # Parse HAKA uid
                 uid = (str(uid.text)).strip()
-                if(osasto == config["haka_halytysosasto_id"]):
-                    db_function = "haka_groups"
-                    group = "Hälytysosasto"
-                    db_manager(db_function,config,uid,group)
-
-                if(osasto == config["haka_jarjestoosasto_id"]):
-                    db_function = "haka_groups"
-                    group = "Järjestöosasto"
-                    db_manager(db_function,config,uid,group)
-
-                roles = (str(roles.text)).strip().split(",")
-                for role in roles:
-                    role=role.strip()
-                    if role in accepted_groups:
+                user_exists=db_manager(db_function,config,uid)
+                if user_exists != []:
+                    if(osasto == config["haka_halytysosasto_id"]):
                         db_function = "haka_groups"
-                        group = role
+                        group = "Hälytysosasto"
                         db_manager(db_function,config,uid,group)
+
+                    if(osasto == config["haka_jarjestoosasto_id"]):
+                        db_function = "haka_groups"
+                        group = "Järjestöosasto"
+                        db_manager(db_function,config,uid,group)
+
+                    roles = (str(roles.text)).strip().split(",")
+                    for role in roles:
+                        role=role.strip()
+                        if role in accepted_groups:
+                            db_function = "haka_groups"
+                            group = role
+                            db_manager(db_function,config,uid,group)
 
 
 def aad_connector(config, aad_function):
@@ -648,13 +670,13 @@ def aad_connector(config, aad_function):
 # LOGIN FUNCTIONALITY
     if (aad_function == 'login'):
 
-# Create a preferably long-lived app instance which maintains a token cache.
+        # Create a preferably long-lived app instance which maintains a token cache.
         app = msal.ConfidentialClientApplication(
             config["client_id"], authority=config["authority"],
             client_credential=config["secret"],
         )
 
-# The pattern to acquire a token looks like this.
+        # The pattern to acquire a token looks like this.
         result = None
         result = app.acquire_token_silent(config["scope"], account=None)
 
@@ -687,7 +709,6 @@ def aad_connector(config, aad_function):
                 phone=row[5] if row[5] else " "
                 mail.append(row[6]) if (row[6]) else " "
                 hireDate=row[4].isoformat()+"Z"
- # Create random passowrd for user.
                 password = passwordGen(14)
                 data = {
                      "accountEnabled": "true",
@@ -698,6 +719,8 @@ def aad_connector(config, aad_function):
                      "mailNickname": username,
                      "otherMails": mail,
                      "mobilePhone": phone,
+                     "country": "fi",
+                     "preferredLanguage": "fi",
                      "passwordProfile" : {
                          "forceChangePasswordNextSignIn": "true",
                          "password": password+"Ab1!"
@@ -769,7 +792,7 @@ def aad_connector(config, aad_function):
                  "mobilePhone": phone,
             }
 
-            if (arguments.verbose or arguments.debug): print("User "+firstname+" "+lastname+" ("+aad_uuid+") has been updated in database.."+"\n\r"+"Updating...")
+            if (arguments.debug): print("User "+firstname+" "+lastname+" ("+aad_uuid+") has been updated in database.."+"\n\r"+"Updating...")
             aad_update_user=(s.patch(config["aad_endpoint"]+'/users/'+aad_uuid, json.dumps(data, indent=2), headers={'Content-Type': 'application/json', 'Authorization': 'Bearer ' + aad_access_token}))
             if(aad_update_user.status_code == 204):
                 if (arguments.verbose or arguments.debug): print("Update of "+firstname+" "+lastname+" ("+aad_uuid+") successful!")
@@ -827,7 +850,7 @@ def aad_connector(config, aad_function):
                 firstname=row[1]
                 lastname=row[2]
 
-                if (arguments.verbose or arguments.debug): print("User "+firstname+" "+lastname+" ("+aad_uuid+") has been deleted in database.."+"\n\r"+"Deleting from Azure Active Directory...")
+                if (arguments.debug): print("User "+firstname+" "+lastname+" ("+aad_uuid+") has been deleted in database.."+"\n\r"+"Deleting from Azure Active Directory...")
                 aad_delete_user=(s.delete(config["aad_endpoint"]+'/users/'+aad_uuid, headers={'Content-Type': 'application/json', 'Authorization': 'Bearer ' + aad_access_token}))
                 if(aad_delete_user.status_code == 204):
                     if (arguments.verbose or arguments.debug): print("User "+firstname+" "+lastname+" ("+aad_uuid+") deleted successfully!")
@@ -849,7 +872,7 @@ def aad_connector(config, aad_function):
                 aad_gid=row[4]
 
 
-                if (arguments.verbose or arguments.debug): print("User "+firstname+" "+lastname+" ("+aad_uuid+") is not member or owner of "+group+" anymore..."+"\n\r"+"Updating membership...")
+                if (arguments.debug): print("User "+firstname+" "+lastname+" ("+aad_uuid+") is not member or owner of "+group+" anymore..."+"\n\r"+"Updating membership...")
                 aad_remove_group=(s.delete(config["aad_endpoint"]+'/groups/'+aad_gid+"/members/"+aad_uuid+"/$ref", headers={'Content-Type': 'application/json', 'Authorization': 'Bearer ' + aad_access_token}))
                 if(aad_remove_group.status_code == 204):
                     if (arguments.verbose or arguments.debug): print("Removing membership or ownership for "+firstname+" "+lastname+" ("+aad_uuid+") to "+group+" successful."+"\n\r")
@@ -882,7 +905,7 @@ def aad_connector(config, aad_function):
 
                 onedrive_create_directory=(s.post(config["aad_endpoint"]+'users/'+config["aad_onedrive-user"]+'/drives/'+config["aad_onedrive-drive_id"]+'/root:/Documents/J%C3%A4senet:/children', json.dumps(data, indent=2), headers={'Content-Type': 'application/json', 'Authorization': 'Bearer ' + aad_access_token}))
                 onedrive_directory = json.loads((onedrive_create_directory.content).decode("utf-8"))
-#                try:
+
                 if (onedrive_create_directory.status_code == 201 or onedrive_create_directory.status_code == 200):
                     if (arguments.verbose or arguments.debug): print("Directory created successfully."+"\n\r")
                     db_function = "onedrive_new_drive"
@@ -895,7 +918,9 @@ def aad_connector(config, aad_function):
 #Share the drive if it has not yet been shared.
         db_function = "onedrive_query_drive"
         shareable_directories=db_manager(db_function,config)
-        if shareable_directories is not None:
+        if shareable_directories != []:
+            if (arguments.debug): print("Going to wait for a while to make sure OneDrive is really ready."+"\n\r")
+            countdown(300)
             for row in shareable_directories:
                 username=row[0]
                 onedrive_id=row[1]
@@ -925,7 +950,7 @@ def aad_connector(config, aad_function):
 #Update directory if name has been changed in HAKA
         db_function = "onedrive_updated"
         update_directories=db_manager(db_function,config)
-        if update_directories is not None:
+        if update_directories != []:
             for row in update_directories:
                 firstname=row[0]
                 lastname=row[1]
@@ -953,16 +978,17 @@ def aad_connector(config, aad_function):
                 onedrive_id=row[2]
 
                 onedrive_delete_directory=(s.delete(config["aad_endpoint"]+'drives/'+config["aad_onedrive-drive_id"]+'/items/'+onedrive_id, headers={'Content-Type': 'application/json', 'Authorization': 'Bearer ' + aad_access_token}))
-                if (onedrive_delete_directory.status_code == 204):
+                if (onedrive_delete_directory.status_code == 204 or onedrive_delete_directory.status_code == 201 or onedrive_delete_directory.status_code == 200):
                     if (arguments.verbose or arguments.debug): print("Directory "+lastname+" "+firstname+" successfully deleted."+"\n\r")
 
                 else:
                     if (arguments.verbose or arguments.debug): print("Deleting directory "+lastname+" "+firstname+" failed!"+"\n\r")
-                    if (arguments.debug): print(onedrive_share_drive.status_code)
-                    if (arguments.debug): print(json.loads((onedrive_share_drive.content).decode("utf8")))
+                    if (arguments.debug): print(onedrive_delete_directory.status_code)
+                    if (arguments.debug): print(json.loads((onedrive_delete_directory.content).decode("utf8")))
 
         else:
             return
+
 
     if (aad_function == 'aad_exchange_management'):
         db_function = "aad_post_users"
@@ -970,33 +996,37 @@ def aad_connector(config, aad_function):
         forward_succeed=0
 
         if aad_post_users != []:
+            if (arguments.debug): print("Going to wait for a while to ensure that Exchange Online"+"\n\r"+"has been able to provision the new mailboxes."+"\n\r")
             countdown(600)
-            while (forward_succeed != 1):
-                if (arguments.debug): print("Going to wait for a while to ensure that Exchange Online"+"\n\r"+"has been able to provision the new mailboxes."+"\n\r")
 
-                for row in aad_post_users:
+            for row in aad_post_users:
+                forward_succeed = 0
+                while (forward_succeed != 1):
                     aad_uuid=str(row[0])
                     username=row[1]
                     firstname=row[2]
                     lastname=row[3]
-                    mail=row[4]
+                    if (row[4]):
+                        mail=row[4]
 
-                    data = {
-                         "displayName": "Oletusvälitys",
-                         "sequence": "2",
-                         "isEnabled": "true",
-                         "actions": {
-                             "forwardTo": [
-                                 {
-                                 "emailAddress": {
-                                     "name": firstname+" "+lastname,
-                                     "address": mail
+                        data = {
+                             "displayName": "Oletusvälitys",
+                             "sequence": "2",
+                             "isEnabled": "true",
+                             "actions": {
+                                 "forwardTo": [
+                                     {
+                                     "emailAddress": {
+                                         "name": firstname+" "+lastname,
+                                         "address": mail
+                                         }
                                      }
-                                 }
-                             ],
-                         "stopProcessingRules": "true"
-                         }
-                    }
+                                 ],
+                             "stopProcessingRules": "true"
+                             }
+                        }
+
+                    else: forward_succeed=1
 
 # Set automatic forwarding
                     if (arguments.verbose or arguments.debug): print("Adding automatic forwarding from "+username+"@"+config["domain"]+" to "+row[4]+".")
@@ -1006,7 +1036,7 @@ def aad_connector(config, aad_function):
                             forward_succeed = 1
                             if (arguments.verbose or arguments.debug): print("Automatic forwarding succeed."+"\n\r")
                         else:
-                            directory_creation = 0
+                            forward_succeed = 0
                             if (arguments.verbose or arguments.debug):
                                 print("Automatic forwarding failed.")
                                 print("HTTP Status code: "+str(aad_set_auto_forward.status_code))
@@ -1014,7 +1044,6 @@ def aad_connector(config, aad_function):
                             countdown(300)
             else:
                 return
-
 
 
 def main():
@@ -1038,7 +1067,5 @@ def main():
     if (arguments.debug): print(datetime.now() - startTime)
     cleanup(config)
     if (arguments.debug): print(datetime.now() - startTime)
-
-
 
 main()
