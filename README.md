@@ -38,6 +38,7 @@ MariaDB [haka_integ]> describe users;
 | exists_haka_flag     | tinyint(1)       | YES  |     | NULL    |       |
 | updated_flag         | tinyint(1)       | YES  |     | NULL    |       |
 | new_user_flag        | tinyint(1)       | YES  |     | NULL    |       |
+| disabled_date        | timestamp        | YES  |     | NULL    |       |
 +----------------------+------------------+------+-----+---------+-------+
 
 MariaDB [haka_integ]> describe groups;
