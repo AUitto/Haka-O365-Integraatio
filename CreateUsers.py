@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
 #
-# CreateUsers.py v. 2.0.003
+# CreateUsers.py v. 2.0.004
 #
 # Date 8.4.2020
 
@@ -85,7 +85,6 @@ def delete_user(config, param1="None", param2="None", param3="None", param4="Non
         if (arguments.verbose or arguments.debug): print("Error in deleting "+firstname+" "+lastname+" ("+aad_uuid+").")
         if (arguments.debug): print(json.loads((aad_delete_user.content).decode("utf8")))
 
-### Delete OneDrive Directory		
     onedrive_delete_directory=(s.delete(config["aad_endpoint"]+'drives/'+config["aad_onedrive-drive_id"]+'/items/'+onedrive_id, headers={'Content-Type': 'application/json', 'Authorization': 'Bearer ' + aad_access_token}))
     if (onedrive_delete_directory.status_code == 204 or onedrive_delete_directory.status_code == 201 or onedrive_delete_directory.status_code == 200):
         if (arguments.verbose or arguments.debug): print("Directory "+lastname+" "+firstname+" successfully deleted."+"\n\r")
@@ -136,6 +135,27 @@ def db_manager(db_function, config, param1="None", param2="None", param3="None",
             cursor = conn.cursor()
             if(conn):
                 status = "Success: Connection to SQL-server succeed."
+                try:
+                    cursor.execute(('SHOW OPEN TABLES WHERE in_use>%s'), ('0',))
+                    conn.commit()
+
+                except mysql.connector.Error as err:
+                    error_msg.append("Error: Cannot fetch locked tables. Current db_function is: "+db_function+". SQL-error: "+str(err)+".")
+                    return status
+
+                row=cursor.fetchone()
+                if (row is None):
+                    try:
+                        cursor.execute('LOCK TABLE users WRITE, groups WRITE, groupmap READ')
+                        conn.commit()
+
+                    except mysql.connector.Error as err:
+                        error_msg.append("Error: Can not lock tables. Current db_function is: "+db_function+". SQL-error: "+str(err)+".")
+                        return status
+                else:
+                    error_msg.append("Error: Can not lock tables. Current db_function is: "+db_function+". SQL-error: "+str(err)+".")
+                    return status
+
         except mysql.connector.Error as err:
             if err.errno == errorcode.ER_ACCESS_DENIED_ERROR:
                 status = "Error: Could not connect to SQL-server! Something is wrong with your user name or password."
@@ -346,7 +366,7 @@ def db_manager(db_function, config, param1="None", param2="None", param3="None",
 ### aad_remove_groups
     if (db_function == 'aad_remove_groups'):
         try:
-            cursor.execute('SELECT users.aad_uuid, users.firstname, users.lastname, groups.haka_group, groupmap.aad_gid FROM users LEFT JOIN groups ON groups.haka_uid=users.haka_uid LEFT JOIN groupmap ON groups.haka_group=groupmap.haka_group WHERE groups.exists_haka_flag IS NULL AND users.aad_uuid IS NOT NULL')
+            cursor.execute('SELECT users.aad_uuid, users.haka_uid, users.firstname, users.lastname, groups.haka_group, groupmap.aad_gid FROM users LEFT JOIN groups ON groups.haka_uid=users.haka_uid LEFT JOIN groupmap ON groups.haka_group=groupmap.haka_group WHERE groups.exists_haka_flag IS NULL AND users.aad_uuid IS NOT NULL')
             conn.commit()
         except mysql.connector.Error as err:
             error_msg.append("Error selecting groups from database to be removed from Azure Active Directory. Current db_function is: "+db_function+". SQL-error: "+str(err)+".")
@@ -382,8 +402,8 @@ def db_manager(db_function, config, param1="None", param2="None", param3="None",
             error_msg.append("Error selecting groups from database. Current db_function is: "+db_function+". SQL-error: "+str(err)+".")
             if(arguments.debug or arguments.verbose): print(error_msg[-1])
 
-
         row=cursor.fetchone()
+
         if (row is not None):
             if arguments.debug: print("\n\r"+"Group "+group+" exists in the database for user "+uid+"."+"\n\r")
             try:
@@ -474,6 +494,18 @@ def db_manager(db_function, config, param1="None", param2="None", param3="None",
             error_msg.append("Error updating flags after successfully sharing directory. Current db_function is: "+db_function+". SQL-error: "+str(err)+".")
             if(arguments.debug or arguments.verbose): print(error_msg[-1])
 
+### db_remove_group
+    if (db_function == 'db_remove_group'):
+        haka_uid=param1
+        group=param2
+        try:
+            cursor.execute(("DELETE FROM groups WHERE haka_uid=%s AND haka_group=%s"), (haka_uid, group))
+            conn.commit()
+        except mysql.connector.Error as err:
+            error_msg.append("Error removing group. Current db_function is: "+db_function+". SQL-error: "+str(err)+".")
+            if(arguments.debug or arguments.verbose): print(error_msg[-1])
+
+
 ### cleanup
     if (db_function == 'cleanup'):
         try:
@@ -493,8 +525,6 @@ def db_manager(db_function, config, param1="None", param2="None", param3="None",
                     delete_user(config,haka_uid,aad_uuid,firstname,lastname,onedrive_id)
                     cursor.execute(("DELETE FROM users WHERE haka_uid=%s"), (haka_uid,))
                     conn.commit()
-                    cursor.execute(("DELETE FROM groups WHERE haka_uid=%s"), (haka_uid))
-                    conn.commit()
 
         except mysql.connector.Error as err:
             error_msg.append("Error deleting non-existent users from database. Current db_function is: "+db_function+". SQL-error: "+str(err)+".")
@@ -510,6 +540,12 @@ def db_manager(db_function, config, param1="None", param2="None", param3="None",
             conn.commit()
         except mysql.connector.Error as err:
             error_msg.append("Error setting group flags to NULL in database. Current db_function is: "+db_function+". SQL-error: "+str(err)+".")
+            if(arguments.debug or arguments.verbose): print(error_msg[-1])
+        try:
+            cursor.execute("UNLOCK TABLES")
+            conn.commit()
+        except mysql.connector.Error as err:
+            error_msg.append("Error unlocking tables. Current db_function is: "+db_function+". SQL-error: "+str(err)+".")
             if(arguments.debug or arguments.verbose): print(error_msg[-1])
         conn.close()
         return
@@ -602,6 +638,7 @@ def haka_connector(config, haka_function):
             "ctl00$cphContent$lbJasenlajit$lbListBox":"10",
             "ctl00$cphContent$PalokuntaId$hdnValinta": config["haka_palokunta_id"]
         }
+
         users = BeautifulSoup(s.post(config["haka_endpoint"]+'/Raportit/Raportti.aspx?raportti=jasenluettelo.ascx', params).text, features="lxml")
         table = users.find('table')
         rows = table.findChildren('tr')
@@ -824,19 +861,20 @@ def aad_connector(config, aad_function):
                         if (arguments.verbose or arguments.debug): print("Allocation of Office 365 E1 license to "+firstname+" "+lastname+" ("+aad_uuid+") failed.")
                         if (arguments.verbose or arguments.debug): print(aad_update_group.content)
 
-
                     db_function = "aad_created_users"
                     db_manager(db_function,config,haka_uid,aad_uuid)
 
-
                 except:
                     pass
+
 
 ### aad_update_users
     if (aad_function == 'aad_update_users'):
 
         db_function = "aad_update_users"
         aad_updated_users=db_manager(db_function,config)
+#                phone=row[5] if row[5] else " "
+#                mail.append(row[6]) if (row[6]) else " "
 
         for row in aad_updated_users:
             mail = []
@@ -953,10 +991,11 @@ def aad_connector(config, aad_function):
         if aad_removed_groups is not None:
             for row in aad_removed_groups:
                 aad_uuid=str(row[0])
-                firstname=row[1]
-                lastname=row[2]
-                group=row[3]
-                aad_gid=row[4]
+                haka_uid=row[1]
+                firstname=row[2]
+                lastname=row[3]
+                group=row[4]
+                aad_gid=row[5]
 
 
                 if ( group is not None or aad_gid is not None):
@@ -964,6 +1003,8 @@ def aad_connector(config, aad_function):
                     aad_remove_group=(s.delete(config["aad_endpoint"]+'/groups/'+aad_gid+"/members/"+aad_uuid+"/$ref", headers={'Content-Type': 'application/json', 'Authorization': 'Bearer ' + aad_access_token}))
                     if(aad_remove_group.status_code == 204):
                         if (arguments.verbose or arguments.debug): print("Removing membership or ownership for "+firstname+" "+lastname+" ("+aad_uuid+") to "+str(group)+" successful."+"\n\r")
+                        db_function = 'db_remove_group'
+                        db_manager(db_function,config,haka_uid,group)
                     else:
                         if (arguments.verbose or arguments.debug): print("Error removing membership or owenership for "+firstname+" "+lastname+" ("+aad_uuid+") from group "+str(group)+"."+"\n\r")
                         if (arguments.debug): print(json.loads((aad_remove_group.content).decode("utf8")))
@@ -1055,12 +1096,11 @@ def aad_connector(config, aad_function):
                     if (arguments.verbose or arguments.debug): print("Updating directory name failed!"+"\n\r")
                     if (arguments.debug): print(onedrive_share_drive.status_code)
                     if (arguments.debug): print(json.loads((onedrive_share_drive.content).decode("utf8")))
-
-
         else:
             return
 
 
+### aad_exchange_management
     if (aad_function == 'aad_exchange_management'):
         db_function = "aad_post_users"
         aad_post_users=db_manager(db_function,config)
@@ -1113,8 +1153,10 @@ def aad_connector(config, aad_function):
                                 print("HTTP Status code: "+str(aad_set_auto_forward.status_code))
                                 print(json.loads((aad_set_auto_forward.content).decode("utf8")))
                             countdown(300)
+
             else:
                 return
+
 
 
 def main():
@@ -1138,7 +1180,6 @@ def main():
     if (arguments.debug): print(datetime.now() - startTime)
     cleanup(config)
     if (arguments.debug): print(datetime.now() - startTime)
-
 
 
 main()
