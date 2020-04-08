@@ -1,5 +1,8 @@
 # ChangeLog
 
+## 8.4.2020 v. 2.0.004
+- Taulut lukitaan ennen, kuin niihin lähdetään kirjoittamaan. Ennen lukitsemista varmistetaan, että taulut eivät jo ole lukossa, ja jos ovat, niin suorittaminen keskeytetään virheeseen. Tällä vältetään päällekkäinen kirjoittaminen tilanteessa, jossa suoritus on jäänyt silmukkaan, jos Exchange Online ei kykene provisioimaan käyttäjätilejä.
+
 ## 8.4.2020 v. 2.0.003
 - Sen sijaan, että käyttäjä poistettaisiin suoraan, se disabloidaan 30 päivän ajaksi ennen poistamista. Tällä tarkoituksena taklata ongelmat, joita voi esiintyä HAKA:ssa tapahtuvien yllättävien muutoksien johdosta.
 - Tätä varten users-tauluun on lisättävä sarake disabled_date.
