@@ -1,9 +1,9 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
 #
-# CreateUsers.py v. 2.0.002
+# CreateUsers.py v. 2.0.003
 #
-# Date 4.4.2020
+# Date 8.4.2020
 
 # Import modules
 import sys
@@ -69,13 +69,41 @@ def countdown(t):
 
     return
 
+def delete_user(config, param1="None", param2="None", param3="None", param4="None", param5="None"):
+    haka_uid=param1
+    aad_uuid=param2
+    firstname=param3
+    lastname=param4
+    onedrive_id=param5
+
+### Delete from AAD
+    if (arguments.debug): print("User "+firstname+" "+lastname+" ("+aad_uuid+") has been disabled for 30 days..."+"\n\r"+"Deleting from Azure Active Directory...")
+    aad_delete_user=(s.delete(config["aad_endpoint"]+'/users/'+aad_uuid, headers={'Content-Type': 'application/json', 'Authorization': 'Bearer ' + aad_access_token}))
+    if(aad_delete_user.status_code == 204):
+        if (arguments.verbose or arguments.debug): print("User "+firstname+" "+lastname+" ("+aad_uuid+") deleted successfully!")
+    else:
+        if (arguments.verbose or arguments.debug): print("Error in deleting "+firstname+" "+lastname+" ("+aad_uuid+").")
+        if (arguments.debug): print(json.loads((aad_delete_user.content).decode("utf8")))
+
+### Delete OneDrive Directory		
+    onedrive_delete_directory=(s.delete(config["aad_endpoint"]+'drives/'+config["aad_onedrive-drive_id"]+'/items/'+onedrive_id, headers={'Content-Type': 'application/json', 'Authorization': 'Bearer ' + aad_access_token}))
+    if (onedrive_delete_directory.status_code == 204 or onedrive_delete_directory.status_code == 201 or onedrive_delete_directory.status_code == 200):
+        if (arguments.verbose or arguments.debug): print("Directory "+lastname+" "+firstname+" successfully deleted."+"\n\r")
+    else:
+        if (arguments.verbose or arguments.debug): print("Deleting directory "+lastname+" "+firstname+" failed!"+"\n\r")
+        if (arguments.debug): print(onedrive_delete_directory.status_code)
+        if (arguments.debug): print(json.loads((onedrive_delete_directory.content).decode("utf8")))
+
+
+
+
 def cleanup(config):
     if (arguments.debug): print("\n\r"+"Starting cleanup() function.")
 
     aad_function = "aad_remove_groups"
     aad_connector(config, aad_function)
 
-    aad_function = "aad_delete_users"
+    aad_function = "aad_disable_users"
     aad_connector(config, aad_function)
 
     db_function = "cleanup"
@@ -229,7 +257,7 @@ def db_manager(db_function, config, param1="None", param2="None", param3="None",
         aad_uuid=param2
         if (uid is not None or aad_uuid is not None):
             try:
-                if arguments.verbose: print("haka_uid: "+uid+" has been created to Azure Active Directory as: "+aad_uuid)
+                if arguments.verbose: print("haka_uid ["+uid+"] has been created to Azure Active Directory as ("+aad_uuid+").")
                 cursor.execute(('UPDATE users SET aad_uuid=%s, new_user_flag=%s WHERE haka_uid=%s'), (aad_uuid, '1', uid))
                 conn.commit()
             except mysql.connector.Error as err:
@@ -269,6 +297,34 @@ def db_manager(db_function, config, param1="None", param2="None", param3="None",
             return row
         return
 
+### aad_disable_users
+    if (db_function == 'aad_disable_users'):
+        try:
+            cursor.execute('SELECT aad_uuid,firstname,lastname FROM users WHERE exists_haka_flag IS NULL AND disabled_date is NULL')
+            conn.commit()
+
+        except mysql.connector.Error as err:
+            error_msg.append("Error selecting deleted users from database. Current db_function is: "+db_function+". SQL-error: "+str(err)+".")
+            if(arguments.debug or arguments.verbose): print(error_msg[-1])
+
+        row=cursor.fetchall()
+        if (row is not None):
+            return row
+        return
+
+### aad_user_disabled
+    if (db_function == 'aad_user_disabled'):
+        aad_uuid=param1
+
+        try:
+            cursor.execute(('UPDATE users SET disabled_date=%s WHERE aad_uuid=%s'), (datetime.now(), aad_uuid))
+            conn.commit()
+
+        except mysql.connector.Error as err:
+            error_msg.append("Error selecting deleted users from database. Current db_function is: "+db_function+". SQL-error: "+str(err)+".")
+            if(arguments.debug or arguments.verbose): print(error_msg[-1])
+
+        return
 
 ### aad_delete_users
     if (db_function == 'aad_delete_users'):
@@ -421,8 +477,25 @@ def db_manager(db_function, config, param1="None", param2="None", param3="None",
 ### cleanup
     if (db_function == 'cleanup'):
         try:
-            cursor.execute("DELETE FROM users WHERE exists_haka_flag IS NULL")
-            conn.commit()
+            cursor.execute("SELECT haka_uid,aad_uuid,firstname,lastname,onedrive_id,disabled_date from users WHERE disabled_date IS NOT NULL")
+            rows=cursor.fetchall()
+
+            for row in rows:
+                haka_uid=row[0]
+                aad_uuid=str(row[1])
+                firstname=row[2]
+                lastname=row[3]
+                onedrive_id=row[4]
+                disabled_date=row[5]
+                difference = datetime.now() - disabled_date
+                if (difference.days > 30):
+                    if(arguments.debug or arguments.verbose): print("User "+firstname+"."+lastname+" ["+str(haka_uid)+"] has been disabled for 30 days. It will be deleted now.")
+                    delete_user(config,haka_uid,aad_uuid,firstname,lastname,onedrive_id)
+                    cursor.execute(("DELETE FROM users WHERE haka_uid=%s"), (haka_uid,))
+                    conn.commit()
+                    cursor.execute(("DELETE FROM groups WHERE haka_uid=%s"), (haka_uid))
+                    conn.commit()
+
         except mysql.connector.Error as err:
             error_msg.append("Error deleting non-existent users from database. Current db_function is: "+db_function+". SQL-error: "+str(err)+".")
             if(arguments.debug or arguments.verbose): print(error_msg[-1])
@@ -431,12 +504,6 @@ def db_manager(db_function, config, param1="None", param2="None", param3="None",
             conn.commit()
         except mysql.connector.Error as err:
             error_msg.append("Error setting user flags to NULL in database. Current db_function is: "+db_function+". SQL-error: "+str(err)+".")
-            if(arguments.debug or arguments.verbose): print(error_msg[-1])
-        try:
-            cursor.execute("DELETE FROM groups WHERE exists_haka_flag IS NULL")
-            conn.commit()
-        except mysql.connector.Error as err:
-            error_msg.append("Error deleting non-existent groups from database. Current db_function is: "+db_function+". SQL-error: "+str(err)+".")
             if(arguments.debug or arguments.verbose): print(error_msg[-1])
         try:
             cursor.execute("UPDATE groups SET exists_haka_flag=NULL, updated_flag=NULL")
@@ -533,9 +600,8 @@ def haka_connector(config, haka_function):
             "__EVENTVALIDATION": users.find('input', {'name':'__EVENTVALIDATION'})['value'],
             "ctl00$Pikahaku$txtHaku":"",
             "ctl00$cphContent$lbJasenlajit$lbListBox":"10",
-            "ctl00$cphContent$PalokuntaId$hdnValinta": "80377"
+            "ctl00$cphContent$PalokuntaId$hdnValinta": config["haka_palokunta_id"]
         }
-
         users = BeautifulSoup(s.post(config["haka_endpoint"]+'/Raportit/Raportti.aspx?raportti=jasenluettelo.ascx', params).text, features="lxml")
         table = users.find('table')
         rows = table.findChildren('tr')
@@ -581,7 +647,6 @@ def haka_connector(config, haka_function):
             mail = str(mail.text).strip()
             mail = "" if not re.search('^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$', mail) else mail
 
-#            if(uid == "90336" or uid == "12730"):
             db_function = "haka_user_management"
             db_manager(db_function,config,uid,username,firstname,lastname,hireDate,mail,phone)
 
@@ -728,14 +793,14 @@ def aad_connector(config, aad_function):
                 }
 
 # Create user
-                if (arguments.verbose or arguments.debug): print("User "+firstname+" "+lastname+" ("+haka_uid+") does not exist in Azure Active Directory."+"\n\r"+"Creating...")
+                if (arguments.verbose or arguments.debug): print("User "+firstname+" "+lastname+" ["+haka_uid+"] does not exist in Azure Active Directory."+"\n\r"+"Creating...")
                 try:
                     aad_create_user=(s.post(config["aad_endpoint"]+'/users', json.dumps(data, indent=2), headers={'Content-Type': 'application/json', 'Authorization': 'Bearer ' + aad_access_token}))
                     if (aad_create_user.status_code == 201):
                         if (arguments.verbose or arguments.debug): print("Success."+"\n\r")
                     else:
                         if (arguments.verbose or arguments.debug):
-                            print("Creating user "+firstname+" "+lastname+" ("+haka_uid+") failed."+"\n\r"+"Continuing..."+"\n\r")
+                            print("Creating user "+firstname+" "+lastname+" ["+haka_uid+"] failed."+"\n\r"+"Continuing..."+"\n\r")
                             print("HTTP Status code: "+str(aad_create_user.status_code))
                             print(json.loads((aad_create_user.content).decode("utf8")))
                     new_users = json.loads((aad_create_user.content).decode("utf-8"))
@@ -837,6 +902,29 @@ def aad_connector(config, aad_function):
                     if (arguments.verbose or arguments.debug): print("Error setting owenership for "+firstname+" "+lastname+" ("+aad_uuid+") to group "+group+"."+"\n\r")
                     if (arguments.debug): print(json.loads((aad_update_group.content).decode("utf8")))
 
+### aad_disable_users
+    if (aad_function == 'aad_disable_users'):
+
+        db_function = "aad_disable_users"
+        aad_disabled_users=db_manager(db_function,config)
+        if aad_disabled_users is not None:
+
+            for row in aad_disabled_users:
+                aad_uuid=str(row[0])
+                firstname=row[1]
+                lastname=row[2]
+
+                if (arguments.debug): print("User "+firstname+" "+lastname+" ("+aad_uuid+") has been deleted in database.."+"\n\r"+"Disabling inf Azure Active Directory...")
+                aad_disable_user=(s.patch(config["aad_endpoint"]+'/users/'+aad_uuid, json={"accountEnabled": "false"}, headers={'Content-Type': 'application/json', 'Authorization': 'Bearer ' + aad_access_token}))
+                if(aad_disable_user.status_code == 204):
+                    if (arguments.verbose or arguments.debug): print("User "+firstname+" "+lastname+" ("+aad_uuid+") disabled successfully!")
+                    db_function = "aad_user_disabled"
+                    db_manager(db_function,config,aad_uuid)
+
+                else:
+                    if (arguments.verbose or arguments.debug): print("Error in disabling "+firstname+" "+lastname+" ("+aad_uuid+").")
+                    if (arguments.debug): print(json.loads((aad_disable_user.content).decode("utf8")))
+
 
 ### aad_delete_users
     if (aad_function == 'aad_delete_users'):
@@ -850,7 +938,7 @@ def aad_connector(config, aad_function):
                 firstname=row[1]
                 lastname=row[2]
 
-                if (arguments.debug): print("User "+firstname+" "+lastname+" ("+aad_uuid+") has been deleted in database.."+"\n\r"+"Deleting from Azure Active Directory...")
+                if (arguments.debug): print("User "+firstname+" "+lastname+" ("+aad_uuid+") has been disabledd for 30 days..."+"\n\r"+"Deleting from Azure Active Directory...")
                 aad_delete_user=(s.delete(config["aad_endpoint"]+'/users/'+aad_uuid, headers={'Content-Type': 'application/json', 'Authorization': 'Bearer ' + aad_access_token}))
                 if(aad_delete_user.status_code == 204):
                     if (arguments.verbose or arguments.debug): print("User "+firstname+" "+lastname+" ("+aad_uuid+") deleted successfully!")
@@ -862,7 +950,6 @@ def aad_connector(config, aad_function):
     if (aad_function == 'aad_remove_groups'):
         db_function = "aad_remove_groups"
         aad_removed_groups=db_manager(db_function,config)
-
         if aad_removed_groups is not None:
             for row in aad_removed_groups:
                 aad_uuid=str(row[0])
@@ -872,13 +959,14 @@ def aad_connector(config, aad_function):
                 aad_gid=row[4]
 
 
-                if (arguments.debug): print("User "+firstname+" "+lastname+" ("+aad_uuid+") is not member or owner of "+group+" anymore..."+"\n\r"+"Updating membership...")
-                aad_remove_group=(s.delete(config["aad_endpoint"]+'/groups/'+aad_gid+"/members/"+aad_uuid+"/$ref", headers={'Content-Type': 'application/json', 'Authorization': 'Bearer ' + aad_access_token}))
-                if(aad_remove_group.status_code == 204):
-                    if (arguments.verbose or arguments.debug): print("Removing membership or ownership for "+firstname+" "+lastname+" ("+aad_uuid+") to "+group+" successful."+"\n\r")
-                else:
-                    if (arguments.verbose or arguments.debug): print("Error removing membership or owenership for "+firstname+" "+lastname+" ("+aad_uuid+") from group "+group+"."+"\n\r")
-                    if (arguments.debug): print(json.loads((aad_remove_group.content).decode("utf8")))
+                if ( group is not None or aad_gid is not None):
+                    if (arguments.debug): print("User "+str(firstname)+" "+str(lastname)+" ("+str(aad_uuid)+") is not member or owner of "+str(group)+" anymore..."+"\n\r"+"Updating membership...")
+                    aad_remove_group=(s.delete(config["aad_endpoint"]+'/groups/'+aad_gid+"/members/"+aad_uuid+"/$ref", headers={'Content-Type': 'application/json', 'Authorization': 'Bearer ' + aad_access_token}))
+                    if(aad_remove_group.status_code == 204):
+                        if (arguments.verbose or arguments.debug): print("Removing membership or ownership for "+firstname+" "+lastname+" ("+aad_uuid+") to "+str(group)+" successful."+"\n\r")
+                    else:
+                        if (arguments.verbose or arguments.debug): print("Error removing membership or owenership for "+firstname+" "+lastname+" ("+aad_uuid+") from group "+str(group)+"."+"\n\r")
+                        if (arguments.debug): print(json.loads((aad_remove_group.content).decode("utf8")))
 
         else:
             return
@@ -968,23 +1056,6 @@ def aad_connector(config, aad_function):
                     if (arguments.debug): print(onedrive_share_drive.status_code)
                     if (arguments.debug): print(json.loads((onedrive_share_drive.content).decode("utf8")))
 
-#Delete directory if user does not exist in HAKA
-        db_function = "onedrive_deleted"
-        delete_directories=db_manager(db_function,config)
-        if delete_directories is not None:
-            for row in delete_directories:
-                firstname=row[0]
-                lastname=row[1]
-                onedrive_id=row[2]
-
-                onedrive_delete_directory=(s.delete(config["aad_endpoint"]+'drives/'+config["aad_onedrive-drive_id"]+'/items/'+onedrive_id, headers={'Content-Type': 'application/json', 'Authorization': 'Bearer ' + aad_access_token}))
-                if (onedrive_delete_directory.status_code == 204 or onedrive_delete_directory.status_code == 201 or onedrive_delete_directory.status_code == 200):
-                    if (arguments.verbose or arguments.debug): print("Directory "+lastname+" "+firstname+" successfully deleted."+"\n\r")
-
-                else:
-                    if (arguments.verbose or arguments.debug): print("Deleting directory "+lastname+" "+firstname+" failed!"+"\n\r")
-                    if (arguments.debug): print(onedrive_delete_directory.status_code)
-                    if (arguments.debug): print(json.loads((onedrive_delete_directory.content).decode("utf8")))
 
         else:
             return
@@ -996,7 +1067,7 @@ def aad_connector(config, aad_function):
         forward_succeed=0
 
         if aad_post_users != []:
-            if (arguments.debug): print("Going to wait for a while to ensure that Exchange Online"+"\n\r"+"has been able to provision the new mailboxes."+"\n\r")
+            if (arguments.debug): print("Going to wait for a while to ensure that Exchange Online has been able to provision the new mailboxes."+"\n\r")
             countdown(600)
 
             for row in aad_post_users:
@@ -1067,5 +1138,7 @@ def main():
     if (arguments.debug): print(datetime.now() - startTime)
     cleanup(config)
     if (arguments.debug): print(datetime.now() - startTime)
+
+
 
 main()
