@@ -19,7 +19,7 @@ optional arguments:
 -- SQL-palvelin ja Python3
 
 #### SQL-palvelin
-Tietokannalle kannattanee luoda käyttäjä, jolla on SELECT, UPDATE, INSERT, DELETE -grantit ko. kantaan.
+Tietokannalle kannattanee luoda käyttäjä, jolla on SELECT, UPDATE, INSERT, DELETE, LOCK TABLES -grantit ko. kantaan.
 ```
 MariaDB [haka_integ]> describe users;
 +----------------------+------------------+------+-----+---------+-------+
