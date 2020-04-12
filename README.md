@@ -30,6 +30,8 @@ MariaDB [haka_integ]> describe users;
 | username             | varchar(40)      | YES  |     | NULL    |       |
 | lastname             | varchar(20)      | NO   |     | NULL    |       |
 | firstname            | varchar(20)      | NO   |     | NULL    |       |
+| title                | varchar(50)      | YES  |     | NULL    |       |
+| education            | varchar(50)      | YES  |     | NULL    |       |
 | hireDate             | datetime         | YES  |     | NULL    |       |
 | mail                 | varchar(320)     | NO   |     | NULL    |       |
 | phone                | varchar(22)      | NO   |     | NULL    |       |
@@ -105,5 +107,7 @@ MS Identity Python Daemon: https://github.com/Azure-Samples/ms-identity-python-d
 Järkevä viestinvälitys, eli sisäänrakennettu sähköpostitoiminnallisuus joka lähettäisi sähköpostilla tiedon järjestelmänvalvojille, kun käyttäjiä luodaan, käyttäjien tiedot tai ryhmät päivittyvät, tai kun käyttäjiä poistetaan. Myös jonkinlainen virhetilanteiden raportointi. 
 
 aad_user_management ja db_manager funktioiden siivoaminen. Väitän, että tuolta saisi varmaan jonkun 500 riviä siivottua, kun vaan ymmärtäisi mitä tekee.
+
+Uusi taulu, joka pitäisi hanskassa muutokset sekä sovelluksen tilan.
 
 
