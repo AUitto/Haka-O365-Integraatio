@@ -1,9 +1,9 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
 #
-# CreateUsers.py v. 2.0.5
+# CreateUsers.py v. 2.0.6
 #
-# Date 13.4.2020
+# Date 14.4.2020
 
 # Import modules
 import sys
@@ -1177,7 +1177,7 @@ def aad_connector(config, aad_function):
                     }
 
                 onedrive_update_directory=(s.patch(config["aad_endpoint"]+'drives/'+config["aad_onedrive-drive_id"]+'/items/'+onedrive_id, json.dumps(data, indent=2), headers={'Content-Type': 'application/json', 'Authorization': 'Bearer ' + aad_access_token}))
-                if (onedrive_update_directory.status_code == 200 or onedrive_update_drive.status_code == 201):
+                if (onedrive_update_directory.status_code == 200 or onedrive_update_directory.status_code == 201):
                     if (arguments.debug): print("Directory name successfully changed to "+lastname+" "+firstname+"."+"\n\r")
 
                 else:
