@@ -1,5 +1,8 @@
 # ChangeLog
 
+## 14.4.2020 v. 2.0.6
+- Bugikorjaus
+
 ## 13.4.2020 v. 2.0.5
 - Lisätty rooliin tai koulutustasoon perustuva "titteli", joka näkyy O365:ssä jobTitle-arvona. Tätä varten lisättävä users-tauluun sarakkeet title ja education:
 ```ALTER TABLE users ADD title varchar (50) AFTER firstname;```
