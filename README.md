@@ -117,3 +117,9 @@ Päivitetään viestinvälitystä siten, että se lähettää tervetuliaisviesti
 aad_user_management ja db_manager funktioiden siivoaminen. Väitän, että tuolta saisi varmaan jonkun 500 riviä siivottua, kun vaan ymmärtäisi mitä tekee.
 
 Päivitystoiminto sähköpostien edelleenvälitykselle, ts. toiminnallisuus joka tarkastaa, onko edelleenvälitys yhä olemassa ja käytössä; jos kyllä: vaihda kohdesähköpostiosoite, jos se on muuttunut HAKA:ssa.
+
+Käännetään konffitiedosto ymmärtämään key: value -tyyppistä muotoa, joka mahdollistaisi kommentoinnin hitusen tehokkaammin kuin json.
+
+Käyttöönottotyökalu, joka luo asetustiedoston.
+
+Tarkistustoiminnallisus, joka hakee AAD:stä käyttäjät ja vertaa niitä HAKA:ssa oleviin. Jos yhtäläisyys löytyy, yhdistetään tiedot.
