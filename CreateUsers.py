@@ -1,9 +1,9 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
 #
-# CreateUsers.py v. 2.0.6
+# CreateUsers.py v. 2.2.0
 #
-# Date 14.4.2020
+# Date 16.4.2020
 
 # Import modules
 import sys
@@ -146,7 +146,7 @@ def db_manager(db_function, config, param1="None", param2="None", param3="None",
                 row=cursor.fetchone()
                 if (row is None):
                     try:
-                        cursor.execute('LOCK TABLE users WRITE, groups WRITE, groupmap READ')
+                        cursor.execute('LOCK TABLE users WRITE, groups WRITE, groupmap READ, status WRITE')
                         conn.commit()
 
                     except mysql.connector.Error as err:
@@ -162,10 +162,9 @@ def db_manager(db_function, config, param1="None", param2="None", param3="None",
             elif err.errno == errorcode.ER_BAD_DB_ERROR:
                 status = "Error: Could not connect to SQL-server! Database does not exist."
             else:
-                status = "Error: Could not connect to SQL-server! Error message: "+err
+                status = "Error: Could not connect to SQL-server! Error message: "+str(err)
 
         return status
-
 
 ### haka_user_management
     if (db_function == 'haka_user_management'):
@@ -186,64 +185,94 @@ def db_manager(db_function, config, param1="None", param2="None", param3="None",
 
         if (row is not None):
             if arguments.debug: print("\n\r"+"User "+firstname+" "+lastname+" ("+uid+") exists in the database.")
-            cursor.execute(('UPDATE users SET exists_haka_flag=%s WHERE haka_uid=%s'), ('1', uid))
+            cursor.execute(('INSERT INTO status (haka_uid, status) VALUES(%s, %s)'), (uid, "exists"))
             conn.commit()
+
             if (row[3] == lastname):
                 if arguments.debug: print("Lastname "+row[3]+" has not changed")
             else:
                 try:
-                    cursor.execute(('UPDATE users SET username=%s, lastname=%s, updated_flag=%s WHERE haka_uid=%s'), (username, lastname, '1', uid))
+                    cursor.execute(('UPDATE users SET username=%s, lastname=%s WHERE haka_uid=%s'), (username, lastname, uid))
                     conn.commit()
                     if(arguments.debug or arguments.verbose): print("Lastname updated from "+row[3]+" to "+lastname+".")
                 except mysql.connector.Error as err:
                     error_msg.append("Error in updating lastname from "+row[3]+" to "+lastname+" for user "+firstname+" "+lastname+" ("+uid+"). Current db_function is: "+db_function+". SQL-error: "+str(err)+".")
                     if(arguments.debug or arguments.verbose): print(error_msg[-1])
+                try:
+                    cursor.execute(('INSERT INTO status (haka_uid, modified_key, status) VALUES(%s, %s, %s)'), (uid, 'lastname', 'updated'))
+                    conn.commit()
+                except mysql.connector.Error as err:
+                    error_msg.append("Error in status flag for "+firstname+" "+lastname+" ("+uid+"). Current db_function is: "+db_function+". SQL-error: "+str(err)+".")
+                    if(arguments.debug or arguments.verbose): print(error_msg[-1])
+
             if (row[4] == firstname):
                 if(arguments.debug): print("Firstname "+row[4]+" has not changed.")
             else:
                 try:
-                    cursor.execute(('UPDATE users SET username=%s, firstname=%s, updated_flag=%s WHERE haka_uid=%s'), (username, firstname, '1', uid))
+                    cursor.execute(('UPDATE users SET username=%s, firstname=%s WHERE haka_uid=%s'), (username, firstname, uid))
                     conn.commit()
                     if(arguments.debug or arguments.verbose): print("Firstname updated from "+row[4]+" to "+firstname+".")
                 except mysql.connector.Error as err:
                     error_msg.append("Error in updating firstname from "+row[4]+" to "+firstname+" for user "+firstname+" "+lastname+" ("+uid+"). Current db_function is: "+db_function+". SQL-error: "+str(err)+".")
+                    if(arguments.debug or arguments.verbose): print(error_msg[-1])
+                try:
+                    cursor.execute(('INSERT INTO status (haka_uid, modified_key, status) VALUES(%s, %s, %s)'), (uid, 'firstname', 'updated'))
+                    conn.commit()
+                except mysql.connector.Error as err:
+                    error_msg.append("Error in status flag for "+firstname+" "+lastname+" ("+uid+"). Current db_function is: "+db_function+". SQL-error: "+str(err)+".")
                     if(arguments.debug or arguments.verbose): print(error_msg[-1])
 
             if (row[8] == mail):
                 if arguments.debug: print("Mail "+row[8]+" has not changed.")
             else:
                 try:
-                    cursor.execute(('UPDATE users SET mail=%s, updated_flag=%s WHERE haka_uid=%s'), (mail, '1', uid))
+                    cursor.execute(('UPDATE users SET mail=%s WHERE haka_uid=%s'), (mail, uid))
                     conn.commit()
                     if(arguments.debug or arguments.verbose): print("Mail updated from "+row[8]+" to "+mail+".")
                 except mysql.connector.Error as err:
                     error_msg.append("Error in updating mail from "+row[8]+" to "+mail+" for user "+firstname+" "+lastname+" ("+uid+"). Current db_function is: "+db_function+". SQL-error: "+str(err)+".")
+                    if(arguments.debug or arguments.verbose): print(error_msg[-1])
+                try:
+                    cursor.execute(('INSERT INTO status (haka_uid, modified_key, status) VALUES(%s, %s, %s)'), (uid, 'mail', 'updated'))
+                    conn.commit()
+                except mysql.connector.Error as err:
+                    error_msg.append("Error in status flag for "+firstname+" "+lastname+" ("+uid+"). Current db_function is: "+db_function+". SQL-error: "+str(err)+".")
                     if(arguments.debug or arguments.verbose): print(error_msg[-1])
 
             if (row[9]  == phone):
                 if arguments.debug: print("Phone "+row[9]+" has not changed.")
             else:
                 try:
-                    cursor.execute(('UPDATE users SET phone=%s, updated_flag=%s WHERE haka_uid=%s'), (phone, '1', uid))
+                    cursor.execute(('UPDATE users SET phone=%s WHERE haka_uid=%s'), (phone, uid))
                     conn.commit()
                     if(arguments.debug or arguments.verbose): print("Phone updated from "+row[9]+" to "+phone+".")
                 except mysql.connector.Error as err:
                     error_msg.append("Error in updating phone from "+row[9]+" to "+phone+" for user "+firstname+" "+lastname+" ("+uid+"). Current db_function is: "+db_function+". SQL-error: "+str(err)+".")
                     if(arguments.debug or arguments.verbose): print(error_msg[-1])
+                try:
+                    cursor.execute(('INSERT INTO status (haka_uid, modified_key, status) VALUES(%s, %s, %s)'), (uid, 'phone', 'updated'))
+                    conn.commit()
+                except mysql.connector.Error as err:
+                    error_msg.append("Error in status flag for "+firstname+" "+lastname+" ("+uid+"). Current db_function is: "+db_function+". SQL-error: "+str(err)+".")
+                    if(arguments.debug or arguments.verbose): print(error_msg[-1])
 
         else:
             if (mail or phone):
-                if(arguments.debug or arguments.verbose): print("\n\r"+"User "+firstname+" "+lastname+" ("+uid+") does not exist in the database."+"\n\r"+"Creating...")
+                if(arguments.debug or arguments.verbose): print("\n\r"+"User "+firstname+" "+lastname+" [	"+uid+"] does not exist in the database."+"\n\r"+"Creating...")
                 try:
-                    cursor.execute(('INSERT INTO users (haka_uid, username, lastname, firstname, hireDate, mail, phone, exists_haka_flag) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)'), (uid, username, lastname, firstname, hireDate, mail, phone, '1'))
+                    cursor.execute(('INSERT INTO users (haka_uid, username, lastname, firstname, hireDate, mail, phone) VALUES (%s, %s, %s, %s, %s, %s, %s)'), (uid, username, lastname, firstname, hireDate, mail, phone))
                     conn.commit()
-
                 except mysql.connector.Error as err:
                         error_msg.append("Error in creating user "+firstname+" "+lastname+" ("+uid+"). Current db_function is: "+db_function+". SQL-error: "+str(err)+".")
                         if(arguments.debug or arguments.verbose): print(error_msg[-1])
+                try:
+                    cursor.execute(('INSERT INTO status (haka_uid, status) VALUES(%s, %s)'), (uid, 'new'))
+                    conn.commit()
+                except mysql.connector.Error as err:
+                    error_msg.append("Error in status flag for new user "+firstname+" "+lastname+" ("+uid+"). Current db_function is: "+db_function+". SQL-error: "+str(err)+".")
+                    if(arguments.debug or arguments.verbose): print(error_msg[-1])
             else:
                 if(arguments.debug): print("\n\r"+"User "+firstname+" "+lastname+" ("+uid+") did not have either mail or phone set."+"\n\r")
-
 
 ### haka_verify_user
     if (db_function == 'haka_verify_user'):
@@ -262,8 +291,9 @@ def db_manager(db_function, config, param1="None", param2="None", param3="None",
 ### aad_new_users
     if (db_function == 'aad_new_users'):
         try:
-             cursor.execute('SELECT haka_uid,username,lastname,firstname,hireDate,phone,mail FROM users WHERE aad_uuid IS NULL')
-             conn.commit()
+            cursor.execute(('SELECT users.haka_uid, users.aad_uuid, users.username, users.lastname, users.firstname, users.hireDate, users.phone, users.mail FROM users LEFT JOIN status ON users.haka_uid=status.haka_uid WHERE status=%s'), ('new',))
+            conn.commit()
+
         except mysql.connector.Error as err:
             error_msg.append("Error selecting new users from database. Current db_function is: "+db_function+". SQL-error: "+str(err)+".")
             if(arguments.debug or arguments.verbose): print(error_msg[-1])
@@ -273,14 +303,17 @@ def db_manager(db_function, config, param1="None", param2="None", param3="None",
            return row
 
 
+
+
+
 ### aad_created_users
     if (db_function == 'aad_created_users'):
         uid=param1
         aad_uuid=param2
         if (uid is not None or aad_uuid is not None):
+            if arguments.verbose: print("haka_uid ["+uid+"] has been created to Azure Active Directory as ("+aad_uuid+").")
             try:
-                if arguments.verbose: print("haka_uid ["+uid+"] has been created to Azure Active Directory as ("+aad_uuid+").")
-                cursor.execute(('UPDATE users SET aad_uuid=%s, new_user_flag=%s WHERE haka_uid=%s'), (aad_uuid, '1', uid))
+                cursor.execute(('UPDATE users SET aad_uuid=%s WHERE haka_uid=%s'), (aad_uuid, uid))
                 conn.commit()
             except mysql.connector.Error as err:
                 error_msg.append("Error in updating new Azure Acitve Directory UUID value for user "+uid+" "+aad_uuid+". Current db_function is: "+db_function+". SQL-error: "+str(err)+".")
@@ -290,17 +323,70 @@ def db_manager(db_function, config, param1="None", param2="None", param3="None",
 
 ### aad_update_users
     if (db_function == 'aad_update_users'):
+        uid = ""
+        key = ""
+        payload = {}
         try:
-            cursor.execute(('SELECT aad_uuid,username,lastname,firstname,title,phone,mail FROM users WHERE updated_flag=%s'), ('1',))
+            cursor.execute(('SELECT DISTINCT haka_uid FROM status WHERE status=%s'), ('updated',))
             conn.commit()
+
         except mysql.connector.Error as err:
             error_msg.append("Error selecting updated users from database. Current db_function is: "+db_function+". SQL-error: "+str(err)+".")
             if(arguments.debug or arguments.verbose): print(error_msg[-1])
 
-        row=cursor.fetchall()
-        if (row is not None):
-            return row
-        return
+        uids=cursor.fetchall()
+        for uid in uids:
+            temp={}
+            temp["haka_uid"]=str(uid[0])
+
+            try:
+                uid=uid[0]
+                cursor.execute(('SELECT firstname, lastname, aad_uuid FROM users WHERE haka_uid=%s'), (uid,))
+                conn.commit()
+            except mysql.connector.Error as err:
+                error_msg.append("Error selecting modified keys from database. Current db_function is: "+db_function+". SQL-error: "+str(err)+".")
+                if(arguments.debug or arguments.verbose): print(error_msg[-1])
+            row=cursor.fetchone()
+            firstname=row[0]
+            lastname=row[1]
+            aad_uuid=row[2]
+            temp["firstname"]=firstname
+            temp["lastname"]=lastname
+            temp["aad_uuid"]=aad_uuid
+
+            try:
+                cursor.execute(('SELECT modified_key FROM status WHERE haka_uid=%s AND modified_key IS NOT NULL'), (uid,))
+                conn.commit()
+            except mysql.connector.Error as err:
+                error_msg.append("Error selecting modified keys from database. Current db_function is: "+db_function+". SQL-error: "+str(err)+".")
+                if(arguments.debug or arguments.verbose): print(error_msg[-1])
+
+            keys=cursor.fetchall()
+            for key in keys:
+                if (key[0] == "groups"):
+                    try:
+                        cursor.execute(('SELECT haka_group FROM groups WHERE haka_uid=%s AND updated_flag IS NOT NULL'), (uid,))
+                    except mysql.connector.Error as err:
+                        error_msg.append("Error selecting updated groups from database. Current db_function is: "+db_function+". SQL-error: "+str(err)+".")
+                        if(arguments.debug or arguments.verbose): print(error_msg[-1])
+                    value=cursor.fetchall()
+                    temp[key[0]]=value
+                else:
+                    try:
+                        cursor.execute(('SELECT '+str(key[0])+' FROM users WHERE haka_uid=%s'), (uid,))
+                    except mysql.connector.Error as err:
+                        error_msg.append("Error selecting updated value from database. Current db_function is: "+db_function+". SQL-error: "+str(err)+".")
+                        if(arguments.debug or arguments.verbose): print(error_msg[-1])
+                    value=cursor.fetchone()
+                    temp[key[0]]=value[0]
+
+            payload[uid]=temp
+
+
+        if (payload != {}):
+           return payload
+        else:
+            return
 
 
 ### aad_update_groups
@@ -319,15 +405,14 @@ def db_manager(db_function, config, param1="None", param2="None", param3="None",
             return row
         return
 
-
 ### aad_disable_users
     if (db_function == 'aad_disable_users'):
         try:
-            cursor.execute('SELECT aad_uuid,firstname,lastname FROM users WHERE exists_haka_flag IS NULL AND disabled_date is NULL')
+            cursor.execute('SELECT users.aad_uuid, users.haka_uid, users.username, users.firstname, users.lastname FROM users NATURAL LEFT JOIN status WHERE status.status IS NULL AND users.disabled_date IS NULL')
             conn.commit()
 
         except mysql.connector.Error as err:
-            error_msg.append("Error selecting deleted users from database. Current db_function is: "+db_function+". SQL-error: "+str(err)+".")
+            error_msg.append("Error selecting users to be disabled from database. Current db_function is: "+db_function+". SQL-error: "+str(err)+".")
             if(arguments.debug or arguments.verbose): print(error_msg[-1])
 
         row=cursor.fetchall()
@@ -335,11 +420,9 @@ def db_manager(db_function, config, param1="None", param2="None", param3="None",
             return row
         return
 
-
 ### aad_user_disabled
     if (db_function == 'aad_user_disabled'):
         aad_uuid=param1
-
         try:
             cursor.execute(('UPDATE users SET disabled_date=%s WHERE aad_uuid=%s'), (datetime.now(), aad_uuid))
             conn.commit()
@@ -351,22 +434,6 @@ def db_manager(db_function, config, param1="None", param2="None", param3="None",
         return
 
 
-### aad_delete_users
-    if (db_function == 'aad_delete_users'):
-        try:
-            cursor.execute('SELECT aad_uuid,firstname,lastname FROM users WHERE exists_haka_flag IS NULL')
-            conn.commit()
-
-        except mysql.connector.Error as err:
-            error_msg.append("Error selecting deleted users from database. Current db_function is: "+db_function+". SQL-error: "+str(err)+".")
-            if(arguments.debug or arguments.verbose): print(error_msg[-1])
-
-        row=cursor.fetchall()
-        if (row is not None):
-            return row
-        return
-
-
 ### aad_remove_groups
     if (db_function == 'aad_remove_groups'):
         try:
@@ -374,20 +441,6 @@ def db_manager(db_function, config, param1="None", param2="None", param3="None",
             conn.commit()
         except mysql.connector.Error as err:
             error_msg.append("Error selecting groups from database to be removed from Azure Active Directory. Current db_function is: "+db_function+". SQL-error: "+str(err)+".")
-            if(arguments.debug or arguments.verbose): print(error_msg[-1])
-        row=cursor.fetchall()
-        if (row is not None):
-            return row
-        return
-
-
-#### aad_post_users
-    if (db_function == 'aad_post_users'):
-        try:
-            cursor.execute('SELECT aad_uuid, username, firstname, lastname, mail FROM users WHERE new_user_flag IS NOT NULL')
-            conn.commit()
-        except mysql.connector.Error as err:
-            error_msg.append("Error selecting new users from database. Current db_function is: "+db_function+". SQL-error: "+str(err)+".")
             if(arguments.debug or arguments.verbose): print(error_msg[-1])
         row=cursor.fetchall()
         if (row is not None):
@@ -425,7 +478,14 @@ def db_manager(db_function, config, param1="None", param2="None", param3="None",
             except mysql.connector.Error as err:
                 error_msg.append("Error inserting group "+group+" for user "+uid+". Current db_function is: "+db_function+". SQL-error: "+str(err)+".")
                 if(arguments.debug or arguments.verbose): print(error_msg[-1])
-        return
+            try:
+                cursor.execute(('INSERT INTO status (haka_uid, modified_key,status) VALUES (%s, %s, %s)'), (uid, 'groups', 'updated'))
+                conn.commit()
+            except mysql.connector.Error as err:
+                error_msg.append("Error setting updated group flag for user "+uid+". Current db_function is: "+db_function+". SQL-error: "+str(err)+".")
+                if(arguments.debug or arguments.verbose): print(error_msg[-1])
+
+    return
 
 
 ### onedrive_add_new_drive
@@ -439,7 +499,6 @@ def db_manager(db_function, config, param1="None", param2="None", param3="None",
         except mysql.connector.Error as err:
             error_msg.append("Error updating newly created OneDrive ID. Current db_function is: "+db_function+". SQL-error: "+str(err)+".")
             if(arguments.debug or arguments.verbose): print(error_msg[-1])
-
 
 ### onedrive_query_drive
     if (db_function == 'onedrive_query_drive'):
@@ -457,12 +516,11 @@ def db_manager(db_function, config, param1="None", param2="None", param3="None",
             if(arguments.debug or arguments.verbose): print(error_msg[-1])
 
 
-
 ### onedrive_updated
     if (db_function == 'onedrive_updated'):
 
         try:
-            cursor.execute(('SELECT firstname,lastname,onedrive_id FROM users WHERE updated_flag IS NOT NULL AND onedrive_id IS NOT NULL'))
+            cursor.execute(('SELECT users.firstname, users.lastname, users.onedrive_id FROM users NATURAL LEFT JOIN status WHERE modified_key=%s or modified_key=%s'), ('firstname', 'lastname'))
             conn.commit()
 
             row=cursor.fetchall()
@@ -474,12 +532,12 @@ def db_manager(db_function, config, param1="None", param2="None", param3="None",
             error_msg.append("Error updating onedrive directory name. Current db_function is: "+db_function+". SQL-error: "+str(err)+".")
             if(arguments.debug or arguments.verbose): print(error_msg[-1])
 
-
 ### onedrive_deleted
     if (db_function == 'onedrive_deleted'):
 
         try:
-            cursor.execute(('SELECT firstname,lastname,onedrive_id FROM users WHERE exists_haka_flag IS NULL AND onedrive_id IS NOT NULL'))
+
+            cursor.execute(('SELECT users.aad_uuid, users.firstname, users.lastname FROM users NATURAL LEFT JOIN status WHERE status.status IS NULL AND users.disabled_date IS NULL AND onedrive_id IS NOT NULL;'))
             conn.commit()
 
             row=cursor.fetchall()
@@ -503,7 +561,6 @@ def db_manager(db_function, config, param1="None", param2="None", param3="None",
             error_msg.append("Error updating flags after successfully sharing directory. Current db_function is: "+db_function+". SQL-error: "+str(err)+".")
             if(arguments.debug or arguments.verbose): print(error_msg[-1])
 
-			
 ### db_remove_group
     if (db_function == 'db_remove_group'):
         haka_uid=param1
@@ -516,13 +573,13 @@ def db_manager(db_function, config, param1="None", param2="None", param3="None",
             error_msg.append("Error removing group. Current db_function is: "+db_function+". SQL-error: "+str(err)+".")
             if(arguments.debug or arguments.verbose): print(error_msg[-1])
 
-			
+
 ### haka_roles
     if (db_function == 'haka_roles'):
         haka_uid=param1
         roles=param2
-        title = ""
-        education = ""
+        title = " "
+        education = " "
         title_list= {'1. varapäällikkö', '2. varapäällikkö', 'Koulutuspäällikkö', 'Nuoriso-osaston johtaja', 'Nuoriso-osaston varajohtaja', 'Palokunnan päällikkö', 'Puheenjohtaja', 'Ryhmänjohtaja', 'Veteraaniosaston johtaja'}
         education_list = {'Nuorempi sammutusmies', 'Sammutusmies', 'Vanhempi sammutusmies', 'Sammutusmiesharjoittelija'}
 
@@ -531,7 +588,7 @@ def db_manager(db_function, config, param1="None", param2="None", param3="None",
 
             if role in education_list:
                 education = role
-                if (title == ""): title = role
+                if (title == " "): title = role
 
             if role in title_list:
                 title = role
@@ -554,11 +611,17 @@ def db_manager(db_function, config, param1="None", param2="None", param3="None",
             if(arguments.debug or arguments.verbose): print(error_msg[-1])
         if (rows[0] != title):
             try:
-                cursor.execute(("UPDATE users SET title=%s, updated_flag=%s WHERE haka_uid=%s"), (title, '1', haka_uid))
+                cursor.execute(("UPDATE users SET title=%s WHERE haka_uid=%s"), (title, haka_uid))
                 conn.commit()
                 if(arguments.debug): print("Title updated to: "+title+" from "+str(rows[0]))
             except mysql.connector.Error as err:
                 error_msg.append("Error setting title. Current db_function is: "+db_function+". SQL-error: "+str(err)+".")
+                if(arguments.debug or arguments.verbose): print(error_msg[-1])
+            try:
+                cursor.execute(("INSERT INTO status(haka_uid, modified_key, status) VALUES(%s, %s, %s)"), (haka_uid, 'title', 'updated'))
+                conn.commit()
+            except mysql.connector.Error as err:
+                error_msg.append("Error setting title flag on status table. Current db_function is: "+db_function+". SQL-error: "+str(err)+".")
                 if(arguments.debug or arguments.verbose): print(error_msg[-1])
 
         try:
@@ -569,16 +632,21 @@ def db_manager(db_function, config, param1="None", param2="None", param3="None",
             if(arguments.debug or arguments.verbose): print(error_msg[-1])
         if (rows[0] != education):
             try:
-                cursor.execute(("UPDATE users SET education=%s, updated_flag=%s WHERE haka_uid=%s"), (education, '1', haka_uid))
+                cursor.execute(("UPDATE users SET education=%s WHERE haka_uid=%s"), (education, haka_uid))
                 conn.commit()
                 if(arguments.debug): print("Education updated to: "+education+" from "+str(rows[0]))
             except mysql.connector.Error as err:
                 error_msg.append("Error setting education. Current db_function is: "+db_function+". SQL-error: "+str(err)+".")
                 if(arguments.debug or arguments.verbose): print(error_msg[-1])
+            try:
+                cursor.execute(("INSERT INTO status(haka_uid, modified_key, status) VALUES(%s, %s, %s)"), (haka_uid, 'education', 'updated'))
+                conn.commit()
+            except mysql.connector.Error as err:
+                error_msg.append("Error setting education flag on status table. Current db_function is: "+db_function+". SQL-error: "+str(err)+".")
+                if(arguments.debug or arguments.verbose): print(error_msg[-1])
 
-
-### cleanup
-    if (db_function == 'cleanup'):
+### db_delete_user
+    if (db_function == 'db_delete_user'):
         try:
             cursor.execute("SELECT haka_uid,aad_uuid,firstname,lastname,onedrive_id,disabled_date from users WHERE disabled_date IS NOT NULL")
             rows=cursor.fetchall()
@@ -592,20 +660,50 @@ def db_manager(db_function, config, param1="None", param2="None", param3="None",
                 disabled_date=row[5]
                 difference = datetime.now() - disabled_date
                 if (difference.days > 30):
-                    if(arguments.debug or arguments.verbose): print("User "+firstname+"."+lastname+" ["+str(haka_uid)+"] has been disabled for 30 days. It will be deleted now.")
+                    if(arguments.debug or arguments.verbose): print("User "+firstname+" "+lastname+" ["+str(haka_uid)+"] ("+aad_uuid+") has been disabled for 30 days. It will be deleted now.")
                     delete_user(config,haka_uid,aad_uuid,firstname,lastname,onedrive_id)
-                    cursor.execute(("DELETE FROM users WHERE haka_uid=%s"), (haka_uid,))
-                    conn.commit()
-
+                    try:
+                        cursor.execute(('INSERT INTO status (haka_uid, status) VALUES (%s, %s)'), (haka_uid, 'deleted'))
+                        conn.commit()
+                    except mysql.connector.Error as err:
+                        error_msg.append("Error setting education flag on status table. Current db_function is: "+db_function+". SQL-error: "+str(err)+".")
+                        if(arguments.debug or arguments.verbose): print(error_msg[-1])
         except mysql.connector.Error as err:
             error_msg.append("Error deleting non-existent users from database. Current db_function is: "+db_function+". SQL-error: "+str(err)+".")
             if(arguments.debug or arguments.verbose): print(error_msg[-1])
+
+
+### db_deleted_users
+    if (db_function == 'db_deleted_users'):
+
         try:
-            cursor.execute("UPDATE users SET exists_haka_flag=NULL, updated_flag=NULL, new_user_flag=NULL")
+            cursor.execute(('SELECT users.aad_uuid, users.username, users.lastname, users.firstname, users.haka_uid FROM users LEFT JOIN status ON users.haka_uid=status.haka_uid WHERE status=%s'), ('deleted',))
+            conn.commit()
+
+        except mysql.connector.Error as err:
+            error_msg.append("Error selecting deleted users from database. Current db_function is: "+db_function+". SQL-error: "+str(err)+".")
+            if(arguments.debug or arguments.verbose): print(error_msg[-1])
+
+        row=cursor.fetchall()
+        if (row is not None):
+           return row
+
+### cleanup
+    if (db_function == 'cleanup'):
+
+        try:
+            cursor.execute(("DELETE users FROM users LEFT JOIN status ON users.haka_uid=status.haka_uid WHERE status=%s"), ('deleted',))
+            conn.commit()
+        except mysql.connector.Error as err:
+            error_msg.append("Error removing deleted user from users table. Current db_function is: "+db_function+". SQL-error: "+str(err)+".")
+            if(arguments.debug or arguments.verbose): print(error_msg[-1])
+        try:
+            cursor.execute("DELETE FROM status WHERE haka_uid IS NOT NULL")
             conn.commit()
         except mysql.connector.Error as err:
             error_msg.append("Error setting user flags to NULL in database. Current db_function is: "+db_function+". SQL-error: "+str(err)+".")
             if(arguments.debug or arguments.verbose): print(error_msg[-1])
+
         try:
             cursor.execute("UPDATE groups SET exists_haka_flag=NULL, updated_flag=NULL")
             conn.commit()
@@ -632,17 +730,22 @@ def aad_user_management(config):
     aad_function = "aad_update_users"
     aad_connector(config, aad_function)
 
+    db_function = "db_delete_user"
+    db_manager(db_function,config)
+
 
 def aad_update_groups(config):
     if (arguments.debug): print("\n\r"+"Starting aad_update_groups() function.")
     aad_function = "aad_update_groups"
     aad_connector(config, aad_function)
 
+
 def aad_onedrive_management(config):
     if (arguments.debug): print("\n\r"+"Starting aad_onedrive_management() function.")
 
     aad_function = "aad_onedrive_management"
     aad_connector(config, aad_function)
+
 
 def aad_exchange_management(config):
     if (arguments.debug): print("\n\r"+"Starting aad_exchange__management() function.")
@@ -709,7 +812,6 @@ def haka_connector(config, haka_function):
             "ctl00$cphContent$lbJasenlajit$lbListBox":"10",
             "ctl00$cphContent$PalokuntaId$hdnValinta": config["haka_palokunta_id"]
         }
-#        soup= BeautifulSoup(s.post(config["haka_endpoint"]+'/Raportit/Raportti.aspx?raportti=jasenluettelo.ascx', params).text, features="lxml")
         users = BeautifulSoup(s.post(config["haka_endpoint"]+'/Raportit/Raportti.aspx?raportti=jasenluettelo.ascx', params).text, features="lxml")
         table = users.find('table')
         rows = table.findChildren('tr')
@@ -757,6 +859,7 @@ def haka_connector(config, haka_function):
 
             db_function = "haka_user_management"
             db_manager(db_function,config,uid,username,firstname,lastname,hireDate,mail,phone)
+
 
 
 ### haka_groups
@@ -839,7 +942,9 @@ def haka_connector(config, haka_function):
                             db_manager(db_function,config,uid,group)
 
 
-def aad_connector(config, aad_function):
+
+
+def aad_connector(config, aad_function, param1="None"):
     global aad_access_token
     global app
     if (arguments.debug):  print("Starting aad_connector() function."+"\r\n"+"Current aad_function: "+aad_function)
@@ -870,23 +975,23 @@ def aad_connector(config, aad_function):
             status = "Logging in to Azure Active Directory failed!"
             return status
 
-
 ### aad_create_users
 
     if (aad_function == 'aad_create_users'):
         db_function = "aad_new_users"
         aad_new_users=db_manager(db_function,config)
+
         if aad_new_users is not None:
 
             for row in aad_new_users:
                 mail = []
                 haka_uid=str(row[0])
-                username=row[1]
-                firstname=row[3]
-                lastname=row[2]
-                phone=row[5] if row[5] else " "
-                mail.append(row[6]) if (row[6]) else " "
-                hireDate=row[4].isoformat()+"Z"
+                username=row[2]
+                firstname=row[4]
+                lastname=row[3]
+                phone=row[6] if row[6] else " "
+                mail.append(row[7]) if (row[7]) else " "
+                hireDate=row[5].isoformat()+"Z"
                 password = passwordGen(14)
                 data = {
                      "accountEnabled": "true",
@@ -905,7 +1010,6 @@ def aad_connector(config, aad_function):
                      }
                 }
 
-
 # Create user
                 if (arguments.verbose or arguments.debug): print("User "+firstname+" "+lastname+" ["+haka_uid+"] does not exist in Azure Active Directory."+"\n\r"+"Creating...")
                 try:
@@ -921,7 +1025,6 @@ def aad_connector(config, aad_function):
                     aad_uuid=new_users['id']
                     aad_update_user=(s.patch(config["aad_endpoint"]+'/users/'+aad_uuid, json={"hireDate": hireDate}, headers={'Content-Type': 'application/json', 'Authorization': 'Bearer ' + aad_access_token}))
 
-
 # Add user to global groups
                     if (arguments.verbose or arguments.debug): print("Adding user "+firstname+" "+lastname+" ("+aad_uuid+") to global groups."+"\n\r"+"Updating...")
                     aad_update_group=(s.post(config["aad_endpoint"]+'/groups/'+config["aad_palokunta_id"]+"/members/$ref", json={"@odata.id": "https://graph.microsoft.com/v1.0/users/"+aad_uuid}, headers={'Content-Type': 'application/json', 'Authorization': 'Bearer ' + aad_access_token}))
@@ -930,7 +1033,6 @@ def aad_connector(config, aad_function):
                     else:
                         if (arguments.verbose or arguments.debug): print("Addition of "+firstname+" "+lastname+" ("+aad_uuid+") to Palokunta failed.")
                         if (arguments.verbose or arguments.debug): print(json.loads(aad_update_group.content).decode("utf8"))
-
 
 # Allocate basic Office 365 E1 license
                     aad_update_group=(s.post(config["aad_endpoint"]+'/groups/'+config["aad_app_Office-365-E1_id"]+"/members/$ref", json={"@odata.id": "https://graph.microsoft.com/v1.0/users/"+aad_uuid}, headers={'Content-Type': 'application/json', 'Authorization': 'Bearer ' + aad_access_token}))
@@ -948,95 +1050,101 @@ def aad_connector(config, aad_function):
                 except:
                     pass
 
-
 ### aad_update_users
     if (aad_function == 'aad_update_users'):
-
         db_function = "aad_update_users"
         aad_updated_users=db_manager(db_function,config)
 
-        for row in aad_updated_users:
+        if aad_updated_users is not None:
+            firstname = ""
+            lastname = ""
+            username = ""
+            title = ""
+            aad_uuid = ""
+            haka_uid = ""
+            phone = ""
             mail = []
-            aad_uuid=str(row[0])
-            username=row[1]
-            firstname=row[3]
-            lastname=row[2]
-            phone=row[5] if row[5] else " "
-            mail.append(row[6]) if row[6] else " "
-            title=row[4] if row[4] else " "
+            for key,value in aad_updated_users.items():
+                for k2,v2 in value.items():
+                    if "aad_uuid" in k2: aad_uuid = v2
+                    if "haka_uid" in k2: haka_uid = v2
+                    if "username" in k2: username = v2
+                    if "firstname" in k2: firstname = v2
+                    if "lastname" in k2: lastname = v2
+                    if "phone" in k2: phone = v2
+                    if "mail" in k2: mail.append(v2)
+                    if "title" in k2: title = v2
 
+                data = {}
+                if firstname: data["givenName"]=firstname
+                if lastname: data["surname"]=lastname
+                if firstname or lastname: data["displayName"]=firstname+" "+lastname
+                if username: data["userPrincipalName"]=username+"@"+config["domain"]
+                if username: data["mailNickname"]=username
+                if mail: data["otherMails"]=mail
+                if phone: data["mobilePhone"]=phone
+                if title: data["jobTitle"]=title
 
-            data = {
-                 "givenName": firstname,
-                 "surname": lastname,
-                 "displayName": firstname+" "+lastname,
-                 "userPrincipalName": username+"@"+config["domain"],
-                 "mailNickname": username,
-                 "otherMails": mail,
-                 "mobilePhone": phone,
-                 "jobTitle": title
-
-            }
-
-            if (arguments.debug): print("User "+firstname+" "+lastname+" ("+aad_uuid+") has been updated in database.."+"\n\r"+"Updating...")
-            aad_update_user=(s.patch(config["aad_endpoint"]+'/users/'+aad_uuid, json.dumps(data, indent=2), headers={'Content-Type': 'application/json', 'Authorization': 'Bearer ' + aad_access_token}))
-            if(aad_update_user.status_code == 204):
-                if (arguments.verbose or arguments.debug): print("Update of "+firstname+" "+lastname+" ("+aad_uuid+") successful!")
-                print(data)
-
-            else:
-                if (arguments.verbose or arguments.debug): print("Error in updating "+firstname+" "+lastname+" ("+aad_uuid+").")
-                if (arguments.debug): print(json.loads((aad_update_user.content).decode("utf8")))
+                if (arguments.debug): print("User "+firstname+" "+lastname+" ("+aad_uuid+") has been updated in database.."+"\n\r"+"Updating...")
+                aad_update_user=(s.patch(config["aad_endpoint"]+'/users/'+aad_uuid, json.dumps(data, indent=2), headers={'Content-Type': 'application/json', 'Authorization': 'Bearer ' + aad_access_token}))
+                if(aad_update_user.status_code == 204):
+                    if (arguments.verbose or arguments.debug): print("Update of "+firstname+" "+lastname+" ("+aad_uuid+") successful!")
+                else:
+                    if (arguments.verbose or arguments.debug): print("Error in updating "+firstname+" "+lastname+" ("+aad_uuid+").")
+                    if (arguments.debug): print(json.loads((aad_update_user.content).decode("utf8")))
 
 
 ### aad_update_groups
     if (aad_function == 'aad_update_groups'):
         db_function = "aad_update_groups"
         aad_updated_groups=db_manager(db_function,config)
-        for row in aad_updated_groups:
-            aad_uuid=str(row[0])
-            firstname=row[1]
-            lastname=row[2]
-            group=row[3]
-            aad_gid=row[4]
-            mode=row[5]
+
+        if aad_updated_groups is not None:
+            for row in aad_updated_groups:
+                aad_uuid=str(row[0])
+                firstname=row[1]
+                lastname=row[2]
+                group=row[3]
+                aad_gid=row[4]
+                mode=row[5]
 
 
-            data = {
-                 "@odata.id": "https://graph.microsoft.com/v1.0/users/"+aad_uuid
-            }
+                data = {
+                     "@odata.id": "https://graph.microsoft.com/v1.0/users/"+aad_uuid
+                }
 
-            if(mode == "member"):
-                if (arguments.verbose or arguments.debug): print("User "+firstname+" "+lastname+" ("+aad_uuid+") is member of "+group+"..."+"\n\r"+"Updating membership...")
-                aad_update_group=(s.post(config["aad_endpoint"]+'/groups/'+aad_gid+"/members/$ref", json.dumps(data, indent=2), headers={'Content-Type': 'application/json', 'Authorization': 'Bearer ' + aad_access_token}))
-                if(aad_update_group.status_code == 204):
-                    if (arguments.verbose or arguments.debug): print("Setting membership for "+firstname+" "+lastname+" ("+aad_uuid+") to "+group+" successful."+"\n\r")
-                else:
-                    if (arguments.verbose or arguments.debug): print("Error setting membership for "+firstname+" "+lastname+" ("+aad_uuid+") to group "+group+"."+"\n\r")
-                    if (arguments.debug): print(json.loads((aad_update_group.content).decode("utf8")))
-            if(mode == "owner"):
-                if (arguments.verbose or arguments.debug): print("User "+firstname+" "+lastname+" ("+aad_uuid+") is owner of "+group+"..."+"\n\r"+"Updating ownership...")
-                aad_update_group=(s.post(config["aad_endpoint"]+'/groups/'+aad_gid+"/owners/$ref", json.dumps(data, indent=2), headers={'Content-Type': 'application/json', 'Authorization': 'Bearer ' + aad_access_token}))
-                if(aad_update_group.status_code == 204):
-                    if (arguments.verbose or arguments.debug): print("Setting ownership for "+firstname+" "+lastname+" ("+aad_uuid+") to "+group+" successful."+"\n\r")
-                else:
-                    if (arguments.verbose or arguments.debug): print("Error setting owenership for "+firstname+" "+lastname+" ("+aad_uuid+") to group "+group+"."+"\n\r")
-                    if (arguments.debug): print(json.loads((aad_update_group.content).decode("utf8")))
-
+                if(mode == "member"):
+                    if (arguments.verbose or arguments.debug): print("User "+firstname+" "+lastname+" ("+aad_uuid+") is member of "+group+"..."+"\n\r"+"Updating membership...")
+                    aad_update_group=(s.post(config["aad_endpoint"]+'/groups/'+aad_gid+"/members/$ref", json.dumps(data, indent=2), headers={'Content-Type': 'application/json', 'Authorization': 'Bearer ' + aad_access_token}))
+                    if(aad_update_group.status_code == 204):
+                        if (arguments.verbose or arguments.debug): print("Setting membership for "+firstname+" "+lastname+" ("+aad_uuid+") to "+group+" successful."+"\n\r")
+                    else:
+                        if (arguments.verbose or arguments.debug): print("Error setting membership for "+firstname+" "+lastname+" ("+aad_uuid+") to group "+group+"."+"\n\r")
+                        if (arguments.debug): print(json.loads((aad_update_group.content).decode("utf8")))
+                if(mode == "owner"):
+                    if (arguments.verbose or arguments.debug): print("User "+firstname+" "+lastname+" ("+aad_uuid+") is owner of "+group+"..."+"\n\r"+"Updating ownership...")
+                    aad_update_group=(s.post(config["aad_endpoint"]+'/groups/'+aad_gid+"/owners/$ref", json.dumps(data, indent=2), headers={'Content-Type': 'application/json', 'Authorization': 'Bearer ' + aad_access_token}))
+                    if(aad_update_group.status_code == 204):
+                        if (arguments.verbose or arguments.debug): print("Setting ownership for "+firstname+" "+lastname+" ("+aad_uuid+") to "+group+" successful."+"\n\r")
+                    else:
+                        if (arguments.verbose or arguments.debug): print("Error setting ownership for "+firstname+" "+lastname+" ("+aad_uuid+") to group "+group+"."+"\n\r")
+                        if (arguments.debug): print(json.loads((aad_update_group.content).decode("utf8")))
 
 ### aad_disable_users
     if (aad_function == 'aad_disable_users'):
 
         db_function = "aad_disable_users"
         aad_disabled_users=db_manager(db_function,config)
+
         if aad_disabled_users is not None:
 
             for row in aad_disabled_users:
                 aad_uuid=str(row[0])
-                firstname=row[1]
-                lastname=row[2]
+                haka_uid=str(row[1])
+                firstname=row[3]
+                lastname=row[4]
 
-                if (arguments.debug): print("User "+firstname+" "+lastname+" ("+aad_uuid+") has been deleted in database.."+"\n\r"+"Disabling inf Azure Active Directory...")
+                if (arguments.debug): print("User "+firstname+" "+lastname+" ("+aad_uuid+") ["+haka_uid+"] has been deleted in database.."+"\n\r"+"Disabling inf Azure Active Directory...")
                 aad_disable_user=(s.patch(config["aad_endpoint"]+'/users/'+aad_uuid, json={"accountEnabled": "false"}, headers={'Content-Type': 'application/json', 'Authorization': 'Bearer ' + aad_access_token}))
                 if(aad_disable_user.status_code == 204):
                     if (arguments.verbose or arguments.debug): print("User "+firstname+" "+lastname+" ("+aad_uuid+") disabled successfully!")
@@ -1048,30 +1156,11 @@ def aad_connector(config, aad_function):
                     if (arguments.debug): print(json.loads((aad_disable_user.content).decode("utf8")))
 
 
-### aad_delete_users
-    if (aad_function == 'aad_delete_users'):
-
-        db_function = "aad_delete_users"
-        aad_deleted_users=db_manager(db_function,config)
-        if aad_deleted_users is not None:
-
-            for row in aad_deleted_users:
-                aad_uuid=str(row[0])
-                firstname=row[1]
-                lastname=row[2]
-
-                if (arguments.debug): print("User "+firstname+" "+lastname+" ("+aad_uuid+") has been disabledd for 30 days..."+"\n\r"+"Deleting from Azure Active Directory...")
-                aad_delete_user=(s.delete(config["aad_endpoint"]+'/users/'+aad_uuid, headers={'Content-Type': 'application/json', 'Authorization': 'Bearer ' + aad_access_token}))
-                if(aad_delete_user.status_code == 204):
-                    if (arguments.verbose or arguments.debug): print("User "+firstname+" "+lastname+" ("+aad_uuid+") deleted successfully!")
-                else:
-                    if (arguments.verbose or arguments.debug): print("Error in deleting "+firstname+" "+lastname+" ("+aad_uuid+").")
-                    if (arguments.debug): print(json.loads((aad_delete_user.content).decode("utf8")))
-
 
 ### aad_remove_groups
     if (aad_function == 'aad_remove_groups'):
         db_function = "aad_remove_groups"
+
         aad_removed_groups=db_manager(db_function,config)
         if aad_removed_groups is not None:
             for row in aad_removed_groups:
@@ -1091,24 +1180,23 @@ def aad_connector(config, aad_function):
                         db_function = 'db_remove_group'
                         db_manager(db_function,config,haka_uid,group)
                     else:
-                        if (arguments.verbose or arguments.debug): print("Error removing membership or owenership for "+firstname+" "+lastname+" ("+aad_uuid+") from group "+str(group)+"."+"\n\r")
+                        if (arguments.verbose or arguments.debug): print("Error removing membership or ownership for "+firstname+" "+lastname+" ("+aad_uuid+") from group "+str(group)+"."+"\n\r")
                         if (arguments.debug): print(json.loads((aad_remove_group.content).decode("utf8")))
 
         else:
             return
 
-
 ### Onedrive create directory
     if (aad_function == 'aad_onedrive_management'):
-        db_function = "aad_post_users"
-        aad_post_users=db_manager(db_function,config)
-        if aad_post_users is not None:
-            for row in aad_post_users:
-                aad_uuid=str(row[0])
-                username=row[1]
-                firstname=row[2]
+        db_function = "aad_new_users"
+        aad_new_users=db_manager(db_function,config)
+        if aad_new_users !=[] or aad_new_users is not None:
+            for row in aad_new_users:
+                aad_uuid=str(row[1])
+                username=row[2]
+                firstname=row[4]
                 lastname=row[3]
-                mail=row[4]
+                mail=row[7]
 
                 data = {
                      "name": lastname+" "+firstname,
@@ -1130,13 +1218,15 @@ def aad_connector(config, aad_function):
                     if (arguments.verbose or arguments.debug): print(onedrive_create_directory.status_code)
                     if (arguments.verbose or arguments.debug): print(json.loads((onedrive_create_directory.content).decode("utf8")))
 
-
 #Share the drive if it has not yet been shared.
         db_function = "onedrive_query_drive"
         shareable_directories=db_manager(db_function,config)
-        if shareable_directories != []:
+
+
+        if shareable_directories !=[]:
+
             if (arguments.debug): print("Going to wait for a while to make sure OneDrive is really ready."+"\n\r")
-            countdown(300)
+            countdown(150)
             for row in shareable_directories:
                 username=row[0]
                 onedrive_id=row[1]
@@ -1163,11 +1253,10 @@ def aad_connector(config, aad_function):
                     if (arguments.debug): print(onedrive_share_drive.status_code)
                     if (arguments.debug): print(json.loads((onedrive_share_drive.content).decode("utf8")))
 
-
 #Update directory if name has been changed in HAKA
         db_function = "onedrive_updated"
         update_directories=db_manager(db_function,config)
-        if update_directories != []:
+        if update_directories is not None:
             for row in update_directories:
                 firstname=row[0]
                 lastname=row[1]
@@ -1190,23 +1279,23 @@ def aad_connector(config, aad_function):
 
 ### aad_exchange_management
     if (aad_function == 'aad_exchange_management'):
-        db_function = "aad_post_users"
-        aad_post_users=db_manager(db_function,config)
+        db_function = "aad_new_users"
+        aad_new_users=db_manager(db_function,config)
         forward_succeed=0
 
-        if aad_post_users != []:
+        if aad_new_users != []:
             if (arguments.debug): print("Going to wait for a while to ensure that Exchange Online has been able to provision the new mailboxes."+"\n\r")
             countdown(600)
 
-            for row in aad_post_users:
+            for row in aad_new_users:
                 forward_succeed = 0
                 while (forward_succeed != 1):
-                    aad_uuid=str(row[0])
-                    username=row[1]
-                    firstname=row[2]
+                    aad_uuid=str(row[1])
+                    username=row[2]
+                    firstname=row[4]
                     lastname=row[3]
-                    if (row[4]):
-                        mail=row[4]
+                    if (row[7]):
+                        mail=row[7]
 
                         data = {
                              "displayName": "Oletusvälitys",
@@ -1227,10 +1316,9 @@ def aad_connector(config, aad_function):
 
                     else: forward_succeed=1
 
-
 # Set automatic forwarding
-                    if (arguments.verbose or arguments.debug): print("Adding automatic forwarding from "+username+"@"+config["domain"]+" to "+row[4]+".")
-                    if (row[4]):
+                    if (arguments.verbose or arguments.debug): print("Adding automatic forwarding from "+username+"@"+config["domain"]+" to "+row[7]+".")
+                    if (row[7]):
                         aad_set_auto_forward=(s.post(config["aad_endpoint"]+'/users/'+aad_uuid+'/mailFolders/inbox/messageRules', json.dumps(data, indent=2), headers={'Content-Type': 'application/json', 'Authorization': 'Bearer ' + aad_access_token}))
                         if(aad_set_auto_forward.status_code == 200 or aad_set_auto_forward.status_code == 201):
                             forward_succeed = 1
@@ -1243,8 +1331,123 @@ def aad_connector(config, aad_function):
                                 print(json.loads((aad_set_auto_forward.content).decode("utf8")))
                             countdown(300)
 
+# aad_send_mail
+    if (aad_function == 'aad_send_mail'):
+        html_msg = param1
+
+        data = {
+           "message": {
+              "subject": "HAKA-O365 Report",
+              "body": {
+              "contentType": "html",
+              "content": html_msg
+              },
+           "toRecipients": [
+              {
+                 "emailAddress": {
+                    "address": config["admin_email_to"]
+                 }
+              }
+           ],
+           },
+           "saveToSentItems": "false"
+           }
+        aad_send_mail=(s.post(config["aad_endpoint"]+'/users/'+config["admin_email_from"]+'/sendMail', json.dumps(data, indent=2), headers={'Content-Type': 'application/json', 'Authorization': 'Bearer ' + aad_access_token}))
+        if (aad_send_mail.status_code == 202):
+            if (arguments.debug): print("Mail sent successfully."+"\n\r")
+        else:
+            if (arguments.verbose or arguments.debug):
+                print("HTTP Status code: "+str(aad_send_mail.status_code))
+                print(json.loads((aad_send_mail.content).decode("utf8")))
+
+
             else:
                 return
+
+def message_handler(config):
+    html_msg = ""
+    db_function = "aad_new_users"
+    new_users=db_manager(db_function,config)
+    if new_users != []:
+        html_msg = html_msg+"<table><tdbody><tr><td style='border: solid 1 \#000000;'>"+"\n\r"+"<p align='center'>NEW USERS</p>"
+        for row in new_users:
+            haka_uid=row[0]
+            aad_uuid=row[1]
+            username=row[2]
+            lastname=row[3]
+            firstname=row[4]
+            html_msg = html_msg+"<tr><td style='border: solid 1 \#000000;'><p align='left'>"+str(firstname)+" "+str(lastname)+" - "+str(username)+" ("+str(aad_uuid)+") ["+str(haka_uid)+"]</p></td>"+"\n\r"
+        html_msg=html_msg+"</td></tr>"+"\n\r"+"</tbody></table>"
+
+
+    db_function = "aad_update_users"
+    updated_users=db_manager(db_function,config)
+    if updated_users is not None:
+        html_msg = html_msg+"<table><tdbody><tr><td style='border: solid 1 \#000000;'>"+"\n\r"+"<p align='center'>UPDATED USERS</p>"
+        firstname = ""
+        lastname = ""
+        username = ""
+        title = ""
+        aad_uuid = ""
+        haka_uid = ""
+        phone = ""
+        groups = []
+        mail = []
+        for key,value in updated_users.items():
+            for k2,v2 in value.items():
+                if "groups" in k2: groups = v2
+                if "aad_uuid" in k2: aad_uuid = v2
+                if "haka_uid" in k2: haka_uid = v2
+                if "username" in k2: username = v2
+                if "firstname" in k2: firstname = v2
+                if "lastname" in k2: lastname = v2
+                if "phone" in k2: phone = v2
+                if "mail" in k2: mail.append(v2)
+                if "title" in k2: title = v2
+            if firstname or lastname: html_msg=html_msg+"<tr><td style='border: solid 1 \#000000;'><p align='left'><strong>"+firstname+" "+lastname+" ("+aad_uuid+") ["+haka_uid+"]</strong></p>"
+            if username: html_msg=html_msg+"<pre align='left'>Username: "+username+"</pre>"
+            if phone: html_msg=html_msg+"<pre align='left'>Phone: "+phone+"</pre>"
+            if mail: html_msg=html_msg+"<pre align='left'>Email: "+mail[0]+"</pre>"
+            if title: html_msg=html_msg+"<pre align='left'>Title: "+title+"</pre>"
+            if groups: html_msg=html_msg+"<pre align='left'>Groups: "+str(groups)+"</pre>"
+            html_msg=html_msg+"</td></tr>"+"\n\r"
+        html_msg=html_msg+"</td></tr>"+"\n\r"+"</tbody></table>"
+
+
+    db_function = "aad_disable_users"
+    disabled_users=db_manager(db_function,config)
+    if disabled_users != []:
+        html_msg = html_msg+"<table><tdbody><td style='border: solid 1 \#000000;'>"+"\n\r"+"<p align='center'>DISABLED USERS</p>"
+        for row in disabled_users:
+            aad_uuid=str(row[0])
+            haka_uid=row[1]
+            firstname=row[3]
+            lastname=row[4]
+            username=row[2]
+            html_msg = html_msg+"<tr><td style='border: solid 1 \#000000;'><p align='left'>"+str(firstname)+" "+str(lastname)+" {"+str(username)+"} ("+str(aad_uuid)+") ["+str(haka_uid)+"]</p>"
+        html_msg=html_msg+"</td></tr>"+"\n\r"+"</tbody></table>"
+
+    db_function = "db_deleted_users"
+    deleted_users=db_manager(db_function,config)
+
+    if deleted_users != []:
+        html_msg = html_msg+"<table><tdbody><td style='border: solid 1 \#000000;'>"+"\n\r"+"<p align='center'>DELETED USERS</p>"
+        for row in deleted_users:
+            aad_uuid=row[0]
+            username=row[1]
+            firstname=row[3]
+            lastname=row[2]
+            haka_uid=row[4]
+            html_msg = html_msg+"<tr><td style='border: solid 1 \#000000;'><p align='left'>"+str(firstname)+" "+str(lastname)+" {"+str(username)+"} ("+str(aad_uuid)+") ["+str(haka_uid)+"]</p></td></tr>"
+
+        html_msg=html_msg+"</td></tr>"+"\n\r"+"</tbody></table>"
+
+
+    if html_msg:
+        html_msg="<table>"+"\n\r"+"<tbody>"+"\n\r"+"<tr>"+"\n\r"+"<td>""<p align='center'><strong>O365 User Report</strong></p>"+"\n\r"+"</td>"+"\n\r"+"</tr>"+"\n\r"+"<tr>"+"\n\r"+html_msg+"</tbody></table>"
+        aad_function = "aad_send_mail"
+        aad_connector(config, aad_function, html_msg)
+
 
 
 def main():
@@ -1265,6 +1468,8 @@ def main():
     aad_update_groups(config)
     if (arguments.debug): print(datetime.now() - startTime)
     aad_onedrive_management(config)
+    if (arguments.debug): print(datetime.now() - startTime)
+    message_handler(config)
     if (arguments.debug): print(datetime.now() - startTime)
     cleanup(config)
     if (arguments.debug): print(datetime.now() - startTime)
