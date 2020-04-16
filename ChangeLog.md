@@ -1,5 +1,11 @@
 # ChangeLog
 
+## 14.4.2020 v. 2.1.0
+- Lisätty ominaisuus, joka seuraa paremmin käyttäjiin kohdistuneita muutoksia.
+- Lisätty ominaisuus, joka lähettää sähköpostia, kun uusi käyttäjä luodaan, olemassaolevaa muokataan, jäsen poistetaan käytöstä tai kun jäsen poistetaan kokonaan.
+- Ylläolevat ominaisuudet vaativat merkittäviä muutoksia tietokantaan. Tietokantaan luodaan kokonaisuudessaan uusi taulu ´´´status´´´ ja ´´´users´´´ -taulusta poistetaan tietyt sarakkeet.
+- Edellä mainitun lisäksi parameters.json-asetustiedostoon tulee listätä osoitteet josta ja johon lähetetään sähköposti-ilmoitukset.
+
 ## 14.4.2020 v. 2.0.6
 - Bugikorjaus
 
