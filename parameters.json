@@ -17,8 +17,8 @@
   "haka_jarjestoosasto_id": "Haka järjestöosasto ID",
   "aad_palokunta_id": "UUID for the Teams group in AAD, to which every member will belong to.",
   "aad_app_Office-365-E1_id": "A group used to provision Office 365 E1 license to every user.",
-  "aad_onedrive-drive_id": "URL-encoded identifier for a specific drive used to share direcories to users."
-  "aad_onedrive-user": "User owning the forementioned Onedrive drive."
+  "aad_onedrive-drive_id": "URL-encoded identifier for a specific drive used to share direcories to users.",
+  "aad_onedrive-user": "User owning the forementioned Onedrive drive.",
   "admin_email_from": "Email address, that is used to send the user report. Supposedly it has to exist in AAD.",
   "admin_email_to": "Email address, that is used to receive the user reoort."
 }
