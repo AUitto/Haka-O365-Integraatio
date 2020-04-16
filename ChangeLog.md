@@ -3,8 +3,11 @@
 ## 16.4.2020 v. 2.1.0
 - Lisätty ominaisuus, joka seuraa paremmin käyttäjiin kohdistuneita muutoksia.
 - Lisätty ominaisuus, joka lähettää sähköpostia, kun uusi käyttäjä luodaan, olemassaolevaa muokataan, jäsen poistetaan käytöstä tai kun jäsen poistetaan kokonaan.
-- Ylläolevat ominaisuudet vaativat merkittäviä muutoksia tietokantaan. Tietokantaan luodaan kokonaisuudessaan uusi taulu ´´´status´´´ ja ´´´users´´´ -taulusta poistetaan tietyt sarakkeet.
+- Ylläolevat ominaisuudet vaativat merkittäviä muutoksia tietokantaan. Tietokantaan luodaan kokonaisuudessaan uusi taulu status, ja users-taulusta poistetaan tietyt sarakkeet.
 - Edellä mainitun lisäksi parameters.json-asetustiedostoon tulee listätä osoitteet josta ja johon lähetetään sähköposti-ilmoitukset.
+
+```create table status (haka_uid int(10) unsigned NOT NULL, modified_key varchar(50), status varchar(10));```
+``` ALTER TABLE users DROP COLUMN exists_haka_flag, DROP COLUMN updated_flag, DROP COLUMN new_user_flag;```
 
 ## 14.4.2020 v. 2.0.6
 - Bugikorjaus
