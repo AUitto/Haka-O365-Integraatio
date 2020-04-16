@@ -37,9 +37,6 @@ MariaDB [haka_integ]> describe users;
 | phone                | varchar(22)      | NO   |     | NULL    |       |
 | onedrive_id          | varchar(40)      | YES  |     | NULL    |       |
 | onedrive_shared_flag | tinyint(1)       | YES  |     | NULL    |       |
-| exists_haka_flag     | tinyint(1)       | YES  |     | NULL    |       |
-| updated_flag         | tinyint(1)       | YES  |     | NULL    |       |
-| new_user_flag        | tinyint(1)       | YES  |     | NULL    |       |
 | disabled_date        | timestamp        | YES  |     | NULL    |       |
 +----------------------+------------------+------+-----+---------+-------+
 
@@ -62,6 +59,14 @@ MariaDB [haka_integ]> describe groupmap;
 | mode       | varchar(10) | YES  |     | NULL    |       |
 +------------+-------------+------+-----+---------+-------+
 ```
+MariaDB [haka_integ_dev]> describe status;
++--------------+------------------+------+-----+---------+-------+
+| Field        | Type             | Null | Key | Default | Extra |
++--------------+------------------+------+-----+---------+-------+
+| haka_uid     | int(10) unsigned | NO   |     | NULL    |       |
+| modified_key | varchar(50)      | YES  |     | NULL    |       |
+| status       | varchar(10)      | YES  |     | NULL    |       |
++--------------+------------------+------+-----+---------+-------+
 
 #### Users-taulu
 Toimii päätauluna kannassa. HAKA:sta tuodaan käyttäjän HAKA:ssa oleva ID-tietue, etu- ja sukunimi, sähköpostiosoite, puhelinnumero ja jäsenyyden alkamisaika. Etu- ja sukunimestä muodostetaan kantaan käyttäjätunnus muodossa etu.sukunimi. Kun Azure Active Directoryyn on luotu käyttäjä, sen UUID-tietue tallennetaan kantaan, jotta osataan myöhemmässä vaiheessa päivittää ja poistaa oikea käyttäjä. Samoin taulussa on muutama erillinen lippu, joilla ohjaillaan sovelluksen toimintaa eri vaiheissa.
@@ -71,6 +76,9 @@ Pitää sisällään tiedot HAKA:sta tuodun jäsenen osastosta, sekä tälle mer
 
 #### Groupmap-taulu
 Tällä ohjataan AAD:ssa olevien ryhmien ja HAKA:n kautta tuotujen roolien yhdistämistä. Samassa taulussa on myös Mode-sarake, joka on joko Member tai Owner, riippuen siitä, että halutaanko tietylle HAKA:n roolille antaa AAD:ssa omistajuus vai pelkkä jäsenyys. Tämä taulu täytyy muodostaa kokonaisuudessaan itse sen perusteella, miten ryhmien haluaa muodostuvan. Taulussa oleva aad_gid arvo on haettava Azure AD:sta.
+
+#### Status-taulu
+Tällä ohjataan suorituksen aikana muutoksia ja niiden tilaa. Tämän tulisi olla suorituksen alkaessa tyhjä; mikäli näin ei ole, on edellinen suoritus jäänyt kesken.
 
 Esimerkki Groupmap-taulun sisällöstä:
 ```
@@ -104,10 +112,8 @@ Microsoft Graph API Reference: https://docs.microsoft.com/en-us/graph/api/overvi
 MS Identity Python Daemon: https://github.com/Azure-Samples/ms-identity-python-daemon
 
 ## To Do:
-Järkevä viestinvälitys, eli sisäänrakennettu sähköpostitoiminnallisuus joka lähettäisi sähköpostilla tiedon järjestelmänvalvojille, kun käyttäjiä luodaan, käyttäjien tiedot tai ryhmät päivittyvät, tai kun käyttäjiä poistetaan. Myös jonkinlainen virhetilanteiden raportointi. 
+Päivitetään viestinvälitystä siten, että se lähettää tervetuliaisviestin uudelle käyttäjälle, mutta myös ilmoitukset virhetilanteista ym.
 
 aad_user_management ja db_manager funktioiden siivoaminen. Väitän, että tuolta saisi varmaan jonkun 500 riviä siivottua, kun vaan ymmärtäisi mitä tekee.
 
-Uusi taulu, joka pitäisi hanskassa muutokset sekä sovelluksen tilan.
-
-
+Päivitystoiminto sähköpostien edelleenvälitykselle, ts. toiminnallisuus joka tarkastaa, onko edelleenvälitys yhä olemassa ja käytössä; jos kyllä: vaihda kohdesähköpostiosoite, jos se on muuttunut HAKA:ssa.
