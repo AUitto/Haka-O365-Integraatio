@@ -1,5 +1,8 @@
 # ChangeLog
 
+## 17.4.2020 v. 2.1.1
+- Bugikorjaus.
+
 ## 16.4.2020 v. 2.1.0
 - Lisätty ominaisuus, joka seuraa paremmin käyttäjiin kohdistuneita muutoksia.
 - Lisätty ominaisuus, joka lähettää sähköpostia, kun uusi käyttäjä luodaan, olemassaolevaa muokataan, jäsen poistetaan käytöstä tai kun jäsen poistetaan kokonaan.
