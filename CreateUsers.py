@@ -1,9 +1,9 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
 #
-# CreateUsers.py v. 2.2.0
+# CreateUsers.py v. 2.2.1
 #
-# Date 16.4.2020
+# Date 17.4.2020
 
 # Import modules
 import sys
@@ -79,19 +79,22 @@ def delete_user(config, param1="None", param2="None", param3="None", param4="Non
 ### Delete from AAD
     if (arguments.debug): print("User "+firstname+" "+lastname+" ("+aad_uuid+") has been disabled for 30 days..."+"\n\r"+"Deleting from Azure Active Directory...")
     aad_delete_user=(s.delete(config["aad_endpoint"]+'/users/'+aad_uuid, headers={'Content-Type': 'application/json', 'Authorization': 'Bearer ' + aad_access_token}))
+
     if(aad_delete_user.status_code == 204):
         if (arguments.verbose or arguments.debug): print("User "+firstname+" "+lastname+" ("+aad_uuid+") deleted successfully!")
     else:
         if (arguments.verbose or arguments.debug): print("Error in deleting "+firstname+" "+lastname+" ("+aad_uuid+").")
         if (arguments.debug): print(json.loads((aad_delete_user.content).decode("utf8")))
 
-    onedrive_delete_directory=(s.delete(config["aad_endpoint"]+'drives/'+config["aad_onedrive-drive_id"]+'/items/'+onedrive_id, headers={'Content-Type': 'application/json', 'Authorization': 'Bearer ' + aad_access_token}))
-    if (onedrive_delete_directory.status_code == 204 or onedrive_delete_directory.status_code == 201 or onedrive_delete_directory.status_code == 200):
-        if (arguments.verbose or arguments.debug): print("Directory "+lastname+" "+firstname+" successfully deleted."+"\n\r")
-    else:
-        if (arguments.verbose or arguments.debug): print("Deleting directory "+lastname+" "+firstname+" failed!"+"\n\r")
-        if (arguments.debug): print(onedrive_delete_directory.status_code)
-        if (arguments.debug): print(json.loads((onedrive_delete_directory.content).decode("utf8")))
+    if onedrive_id:
+        onedrive_delete_directory=(s.delete(config["aad_endpoint"]+'drives/'+config["aad_onedrive-drive_id"]+'/items/'+onedrive_id, headers={'Content-Type': 'application/json', 'Authorization': 'Bearer ' + aad_access_token}))
+
+        if (onedrive_delete_directory.status_code == 204 or onedrive_delete_directory.status_code == 201 or onedrive_delete_directory.status_code == 200):
+            if (arguments.verbose or arguments.debug): print("Directory "+lastname+" "+firstname+" successfully deleted."+"\n\r")
+        else:
+            if (arguments.verbose or arguments.debug): print("Deleting directory "+lastname+" "+firstname+" failed!"+"\n\r")
+            if (arguments.debug): print(onedrive_delete_directory.status_code)
+            if (arguments.debug): print(json.loads((onedrive_delete_directory.content).decode("utf8")))
 
 
 
@@ -485,7 +488,7 @@ def db_manager(db_function, config, param1="None", param2="None", param3="None",
                 error_msg.append("Error setting updated group flag for user "+uid+". Current db_function is: "+db_function+". SQL-error: "+str(err)+".")
                 if(arguments.debug or arguments.verbose): print(error_msg[-1])
 
-    return
+        return
 
 
 ### onedrive_add_new_drive
@@ -507,7 +510,7 @@ def db_manager(db_function, config, param1="None", param2="None", param3="None",
             conn.commit()
 
             row=cursor.fetchall()
-            if (row is not None):
+            if (row is not None or row != []):
                 return row
             return
 
@@ -688,9 +691,9 @@ def db_manager(db_function, config, param1="None", param2="None", param3="None",
         if (row is not None):
            return row
 
+
 ### cleanup
     if (db_function == 'cleanup'):
-
         try:
             cursor.execute(("DELETE users FROM users LEFT JOIN status ON users.haka_uid=status.haka_uid WHERE status=%s"), ('deleted',))
             conn.commit()
@@ -1085,7 +1088,8 @@ def aad_connector(config, aad_function, param1="None"):
                 if phone: data["mobilePhone"]=phone
                 if title: data["jobTitle"]=title
 
-                if (arguments.debug): print("User "+firstname+" "+lastname+" ("+aad_uuid+") has been updated in database.."+"\n\r"+"Updating...")
+                print(aad_uuid)
+                if (arguments.debug): print("User "+firstname+" "+lastname+" ("+str(aad_uuid)+") has been updated in database.."+"\n\r"+"Updating...")
                 aad_update_user=(s.patch(config["aad_endpoint"]+'/users/'+aad_uuid, json.dumps(data, indent=2), headers={'Content-Type': 'application/json', 'Authorization': 'Bearer ' + aad_access_token}))
                 if(aad_update_user.status_code == 204):
                     if (arguments.verbose or arguments.debug): print("Update of "+firstname+" "+lastname+" ("+aad_uuid+") successful!")
@@ -1226,21 +1230,22 @@ def aad_connector(config, aad_function, param1="None"):
         if shareable_directories !=[]:
 
             if (arguments.debug): print("Going to wait for a while to make sure OneDrive is really ready."+"\n\r")
-            countdown(150)
-            for row in shareable_directories:
-                username=row[0]
-                onedrive_id=row[1]
-                data = {
-                         "recipients": [
-                           {
-                              "email": username+"@"+config["domain"]
-                           }
-                        ],
-                        "message": "Paloaseman tietokoneilla olevat tiedostosi.",
-                        "requireSignIn": "true",
-                        "sendInvitation": "true",
-                        "roles": [ "write" ]
-                    }
+            if (shareable_directories is not None):
+                countdown(150)
+                for row in shareable_directories:
+                    username=row[0]
+                    onedrive_id=row[1]
+                    data = {
+                             "recipients": [
+                             {
+                                "email": username+"@"+config["domain"]
+                                }
+                                ],
+                            "message": "Paloaseman tietokoneilla olevat tiedostosi.",
+                            "requireSignIn": "true",
+                            "sendInvitation": "true",
+                            "roles": [ "write" ]
+                            }
 
                 onedrive_share_drive=(s.post(config["aad_endpoint"]+'drives/'+config["aad_onedrive-drive_id"]+'/items/'+onedrive_id+'/invite', json.dumps(data, indent=2), headers={'Content-Type': 'application/json', 'Authorization': 'Bearer ' + aad_access_token}))
                 if (onedrive_share_drive.status_code == 200 or onedrive_share_drive.status_code == 201):
@@ -1429,7 +1434,6 @@ def message_handler(config):
 
     db_function = "db_deleted_users"
     deleted_users=db_manager(db_function,config)
-
     if deleted_users != []:
         html_msg = html_msg+"<table><tdbody><td style='border: solid 1 \#000000;'>"+"\n\r"+"<p align='center'>DELETED USERS</p>"
         for row in deleted_users:
